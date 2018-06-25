@@ -99,17 +99,18 @@ void vesa_init(multiboot_info_t *mbd) {
     //printk("TextOS VESA driver active\n");
     printk("VESA Pages: %i\n", vesa_pages);
     printk("Resolution: %ix%i\n", vesa_mode_info.x_res, vesa_mode_info.y_res);
-
+    printk("Framebuffer: 0x%p\n", vesa_fb_loc);
     //for (;;);
 }
 
 void vesa_stage2() {
     for (int i = 0; i < vesa_pages; i++) {
         //printk("%i) %p -> %p\n", i, (0xFD000000 + (4096*i)), (0xFD000000 + (4096*i)));
-        vmm_map_kernel((0xFD000000 + (4096*i)), (0xFD000000 + (4096*i)), PAGE_RW);
+        vmm_map_kernel((vesa_fb_loc + (4096*i)), (vesa_fb_loc + (4096*i)), PAGE_RW);
         //_vmm_map((0xa000 + (4096*i)), (0xFD000000 + (4096*i)), kernel_directory, true, PAGE_RW);
         //vesa_redraw();
     }
+    printk("VESA mapped from 0x%p -> 0x%p\n", vesa_fb_loc, (vesa_fb_loc + (4096*vesa_pages)));
     //vputchar('A');
     //printk("\n[0][0] = 0x%p\n", vesa_screen[0][0].enabled);
     //vputchar('\n');

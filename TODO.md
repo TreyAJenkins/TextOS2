@@ -4,3 +4,6 @@
 - Kernel modules
 - Expand UAL
 - Ramdisk support
+- Graphics mode switching
+- ACPI
+- SMBios

@@ -325,6 +325,11 @@ uint32 keyboard_callback(uint32 esp) {
 		// Ctrl-D
 		c = 4; // ASCII End of Transmission, good enough
 	}
+	//else if (mod_keys == MOD_CTRL && scancode == 0x2e) {
+		// Ctrl-C
+		//printk("Killing %u (%s)\n", current_task->id, current_task->name);
+		//kill_pid(current_task->id);
+	//}
 	else if ( !(scancode & 0x80) ) { // scancode isn't simply a supported key being released
 		printk("Not implemented (scancode = 0x%02x)\n", scancode);
 		return esp;

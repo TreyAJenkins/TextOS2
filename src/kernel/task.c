@@ -297,7 +297,7 @@ void init_tasking(uint32 kerntask_esp0) {
 	memset(kernel_task.mm, 0, sizeof(struct task_mm));
 	kernel_task.mm->page_directory = kernel_directory;
 	kernel_task.stack = (void *)kerntask_esp0;
-	strlcpy(kernel_task.name, "[kernel_task]", TASK_NAME_LEN);
+	strlcpy(kernel_task.name, "[TextOS Kernel]", TASK_NAME_LEN);
 
 	reaper_task = create_task(reaper_func, "reaper", false, NULL, 0);
 	assert(reaper_task->id == 1);
