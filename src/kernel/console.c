@@ -11,6 +11,7 @@
 #include <kernel/serial.h>
 #include <kernel/hostinfo.h>
 #include <kernel/tsa.h>
+#include <kernel/vesa.h>
 
 #define STRINGIFY(x) #x
 #define MACRO(x)     STRINGIFY(x)
@@ -27,10 +28,8 @@ static uint16 *vram_buffer = NULL;
 
 /* Used by the status bar ONLY */
 static uint16 *real_vmem = (uint16 *)0xb8000;
-static uint8 status_bgcolor = BLUE; /* not const, needs to be able to change */
-static uint8 status_fgcolor = WHITE;
+
 static uint8 current_console_number = 0;
-bool kernel_paniced = false;
 int promptReturn = 0;
 int warning = 0;
 
@@ -224,8 +223,8 @@ void clrscr(void) {
 	if (list_find_first(current_console->tasks, (void *)console_task) != NULL) {
 		// If the task that's calling clrscr() has its console on display, also update the screen at once
 		memsetw(vram_buffer, blank, 80*24);
-		memsetw(videoram, blank, 80*24);
-		update_statusbar();
+		//NOTE: UNCOMMENT TO ENABLE OLD GRAPHICS memsetw(videoram, blank, 80*24);
+		//update_statusbar();
 	}
 
 	Point *cursor = &console_task->console->cursor;
@@ -239,7 +238,7 @@ void cursor_left(void) {
 	Point *cursor = &console_task->console->cursor;
 	if (cursor->x != 0)
 		cursor->x--;
-
+	vcursor_left();
 	update_cursor();
 }
 
@@ -349,29 +348,31 @@ void scrollback_reset(void) {
 
 // Used by update_statusbar() to print text
 static void puts_status(int x, const char *str) {
-	size_t len = strlen(str);
-	assert(x + len <= 80);
-	for (size_t i = 0; i < len; i++) {
-		//if(x + i == 79) break; // TODO: allow timer spinner
-		real_vmem[x + i] = (status_bgcolor << BGCOLOR) | (status_fgcolor << FGCOLOR) | str[i];
-	}
+	//size_t len = strlen(str);
+	//assert(x + len <= 80);
+	//for (size_t i = 0; i < len; i++) {
+	//	//if(x + i == 79) break; // TODO: allow timer spinner
+	//	//NOTE: UNCOMMENT TO ENABLE OLD GRAPHICS real_vmem[x + i] = (status_bgcolor << BGCOLOR) | (status_fgcolor << FGCOLOR) | str[i];
+	//}
+	//vputs_status(x, str);
 }
 
 // Draw/update the status bar at the top of the screen
+#if 0
 void update_statusbar(void) {
 	if (kernel_paniced) {
 		status_bgcolor = RED;
 	}
 
 	// Clear everything
-	memsetw(real_vmem, (uint16)((status_bgcolor << BGCOLOR) | (status_fgcolor << FGCOLOR) | ' '), 80 - 1 /* TODO: allow timer spinner */);
+	//NOTE: UNCOMMENT TO ENABLE OLD GRAPHICS memsetw(real_vmem, (uint16)((status_bgcolor << BGCOLOR) | (status_fgcolor << FGCOLOR) | ' '), 80 - 1 /* TODO: allow timer spinner */);
 
 	if (kernel_paniced) {
 		puts_status(0, "  KERNEL PANIC    KERNEL PANIC    KERNEL PANIC    KERNEL PANIC    KERNEL PANIC  ");
 		return;
 	}
 
-	puts_status(0, "[TextOS]");
+	puts_status(0, "[TextOS/2]");
 
 	// Show the VC number
 	char buf[48] = {0};
@@ -433,7 +434,7 @@ void update_statusbar(void) {
 		puts_status(40-(strlen(trim(buf))/2), trim(buf));
 	}
 }
-
+#endif
 // Copies the part of the screen that should be visible from the scrollback
 // buffer to both the VRAM buffer and the actual video RAM
 void redraw_screen(void) {
@@ -458,10 +459,10 @@ void redraw_screen(void) {
 	}
 
 	// In either case, update the screen with the new data
-	memcpy(videoram, vram_buffer, 80*24*2);
+	//NOTE: UNCOMMENT TO ENABLE OLD GRAPHICS memcpy(videoram, vram_buffer, 80*24*2);
 
 	// Shouldn't be necessary (as the timer calls this), but up-to-date info is always nice anyway
-	update_statusbar();
+	//update_statusbar();
 }
 
 // Scroll the screen, if necessary. If not, this will just return.
@@ -505,90 +506,96 @@ void scroll(void) {
 
 // Print a character to the current cursor location
 int putchar(int c) {
-	Point *cursor = NULL;
-
-	if (promptReturn == -1) {
-		if (c == '\n') {
-			promptReturn = 1;
-		} else if (c == 0x08) {
-			promptReturn = 2;
-		} else {
-			promptReturn = 3;
-		}
-	}
-
-	console_t *con = console_task->console;
-	if (con == NULL)
-		con = &kernel_console;
-
-	cursor = &con->cursor;
-	assert(cursor != NULL);
-
 	serial_send_byte(c);
 
-	if (c == '\n') {
-		// c == newline
-		cursor->x = 0;
-		cursor->y++;
-	} else if (c == '\t') {
-		printk("    ");
-	} else if (c == 0x08) {
-		// Backspace
-		if (cursor->x > 0)
-			cursor->x--;
-		else {
-			if (cursor->y > 0) {
-				cursor->y--;
-				cursor->x = 79;
-			}
-			// else: we can't do anything!
-		}
-	} else if (c >= 0x20) {
-		// 0x20 is the lowest printable character (space)
-		//assert(cursor->y <= 23 && cursor->x <= 79);
-		if (cursor->y > 23)
-			cursor->y = 23;
-		if (cursor->x > 79)
-			cursor->x = 79;
-		const unsigned int offset = cursor->y*80 + cursor->x;
-		uint16 color = (con->back_color << BGCOLOR) | (con->text_color << FGCOLOR);
 
-		if (con != NULL) {
-			// Find the MMIO address and take care of wrapping, as cur_screen() can point outside
-			// the actual buffer. Ugly, yes.
-			uint16 *addr = cur_screen(con) + offset;
-			if (addr >= con->buffer + CONSOLE_BUFFER_SIZE) {
-				addr = con->buffer + (addr - (con->buffer + CONSOLE_BUFFER_SIZE));
-			}
+	Point *cursor = NULL;
 
-			// Set it
-			*addr = ((unsigned char)c) | color;
-		}
-
-		if (list_find_first(current_console->tasks, (void *)console_task) != NULL) {
-			/* Also update the actual video ram if this console is currently displayed */
-			if (con->current_position < 24 && (24UL - con->current_position) > cursor->y) {
-				// In scrollback, but this line should still be on screen. < 24 because there's no chance it's on screen
-				// if we're scrolled back a full screen or more. The rest checks whether the line is still on screen.
-				uint32 sb_offset = 80*con->current_position;
-				videoram[offset + sb_offset] = ((unsigned char)c) | color;
-				vram_buffer[offset + sb_offset] = ((unsigned char)c) | color;
+		if (promptReturn == -1) {
+			if (c == '\n') {
+				promptReturn = 1;
+			} else if (c == 0x08) {
+				promptReturn = 2;
+			} else {
+				promptReturn = 3;
 			}
 		}
 
-		if (cursor->x + 1 == 80) {
-			// Wrap to the next line
-			cursor->y++;
+		console_t *con = console_task->console;
+		if (con == NULL)
+			con = &kernel_console;
+
+		cursor = &con->cursor;
+		assert(cursor != NULL);
+
+		//serial_send_byte(c);
+
+		if (c == '\n') {
+			// c == newline
 			cursor->x = 0;
-		}
-		else {
-			// Don't wrap
-			cursor->x++;
-		}
-	}
+			cursor->y++;
+		} else if (c == '\t') {
+			printk("    ");
+		} else if (c == 0x08) {
+			// Backspace
+			if (cursor->x > 0)
+				cursor->x--;
+			else {
+				if (cursor->y > 0) {
+					cursor->y--;
+					cursor->x = 79;
+				}
+				// else: we can't do anything!
+			}
+		} else if (c >= 0x20) {
+			// 0x20 is the lowest printable character (space)
+			//assert(cursor->y <= 23 && cursor->x <= 79);
+			if (cursor->y > 23)
+				cursor->y = 23;
+			if (cursor->x > 79)
+				cursor->x = 79;
+			const unsigned int offset = cursor->y*80 + cursor->x;
+			uint16 color = (con->back_color << BGCOLOR) | (con->text_color << FGCOLOR);
 
-	scroll(); // Scroll down, if need be
-//	update_cursor();
+			if (con != NULL) {
+				// Find the MMIO address and take care of wrapping, as cur_screen() can point outside
+				// the actual buffer. Ugly, yes.
+				uint16 *addr = cur_screen(con) + offset;
+				if (addr >= con->buffer + CONSOLE_BUFFER_SIZE) {
+					addr = con->buffer + (addr - (con->buffer + CONSOLE_BUFFER_SIZE));
+				}
+
+				// Set it
+				*addr = ((unsigned char)c) | color;
+			}
+
+			if (list_find_first(current_console->tasks, (void *)console_task) != NULL) {
+				/* Also update the actual video ram if this console is currently displayed */
+				if (con->current_position < 24 && (24UL - con->current_position) > cursor->y) {
+					// In scrollback, but this line should still be on screen. < 24 because there's no chance it's on screen
+					// if we're scrolled back a full screen or more. The rest checks whether the line is still on screen.
+					uint32 sb_offset = 80*con->current_position;
+					//videoram[offset + sb_offset] = ((unsigned char)c) | color;
+					//vram_buffer[offset + sb_offset] = ((unsigned char)c) | color;
+				}
+			}
+
+			if (cursor->x + 1 == 80) {
+				// Wrap to the next line
+				cursor->y++;
+				cursor->x = 0;
+			}
+			else {
+				// Don't wrap
+				cursor->x++;
+			}
+		}
+
+		scroll(); // Scroll down, if need be
+	//	update_cursor();
+
+	//if (!kernel_paniced)
+	vputchar(c);
 
 	return c;
 }
@@ -638,15 +645,17 @@ static void force_update_cursor(void) {
 /* The buffer used by printk */
 char _printk_buf[1024];
 
-size_t printc(int back_color, int text_color, const char *fmt, ...) {
-	assert(console_task->console != NULL);
-	int orig_text = console_task->console->text_color;
-	int orig_back = console_task->console->back_color;
+size_t printc(color_t back_color, color_t text_color, const char *fmt, ...) {
+	//assert(console_task->console != NULL);
+	//int orig_text = console_task->console->text_color;
+	//int orig_back = console_task->console->back_color;
 
 	//mutex_lock(printk_mutex);
 
-	set_text_color(text_color);
-	set_back_color(back_color);
+	color_t orig_text = VESAFG;
+	color_t orig_back = VESABG;
+
+	setColor(text_color, back_color);
 
 	va_list args;
 	int i;
@@ -661,10 +670,9 @@ size_t printc(int back_color, int text_color, const char *fmt, ...) {
 			putchar(_printk_buf[j]);
 		}
 	}
-	update_cursor();
+	//update_cursor();
 
-	set_text_color(orig_text);
-	set_back_color(orig_back);
+	setColor(orig_text, orig_back);
 
 	//mutex_unlock(printk_mutex);
 
@@ -687,7 +695,7 @@ size_t printk(const char *fmt, ...) {
 			putchar(_printk_buf[j]);
 		}
 	}
-	update_cursor();
+	//update_cursor();
 
 	//mutex_unlock(printk_mutex);
 

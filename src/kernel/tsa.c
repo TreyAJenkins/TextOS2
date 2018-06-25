@@ -151,7 +151,7 @@ int dropbox(char* nmethod, char* ndata) {
 }
 
 void TSA(void) {
-	printk("\n\n");
+	//printk("\n\n");
 	//printc(RED, WHITE, "                       TEXTOS USERSPACE ABSTRACTION LAYER                       \n\n");
 
 

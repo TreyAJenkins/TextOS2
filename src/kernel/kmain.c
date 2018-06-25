@@ -126,6 +126,8 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 	/* This should be done EARLY on, since many other things will fail (possibly even panic() output) otherwise.
 	 * NOT earlier than the kernel console setup, though! */
 	init_video();
+    vesa_init(mbd);
+
 
 	if (magic != 0x2BADB002) {
 		panic("Invalid magic received from bootloader!");
@@ -151,7 +153,6 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
             ActiveTSA = 0;
         }
 	}
-
 
 	//printk("Little Endian: %i\n", endian());
 
@@ -205,14 +206,14 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
     //printk("Framebuffer: 0x%p\n", mbd->framebuffer_addr);
     printk("Bootloader: %s\n", (char*) mbd->bootloader_name);
 
-    uint32 vbe_control_info = mbd->vbe_control_info;
-    uint16 vbe_mode = mbd->vbe_mode;
-    uint32 vbe_mode_info = mbd->vbe_mode_info;
+
+
+
+    //for(;;);
 
 	/* Initialize the initrd */
 	/* (do this before paging, so that it doesn't end up in the kernel heap) */
 	init_initrd(initrd_location);
-
     //printk("vbe_control_info: %p\n", vbe_control_info);
 
 	if (!(mbd->flags & (1 << 5)))
@@ -224,6 +225,7 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 	if (!quiet)
 		printk("Initializing paging and setting up the kernel heap... ");
 
+
 	//mbd->flags &= ~(1<<6); // Uncomment to test with no memory map
 	if (mbd->flags & (1 << 6)) {
 		// If the memory map is available
@@ -231,9 +233,16 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 	}
 	else
 	   init_paging(0, 0, mbd->mem_upper);
+    //vputchar('K');
+    vesa_stage2();
+    //vesa_clear(COLOR_BLACK);
 
 
-    vesa_init(vbe_control_info, vbe_mode, vbe_mode_info);
+    //vesa_clear(COLOR_WHITE);
+    //for (;;);
+
+    //vesa_stage2();
+    //vputchar('a');
 
     //uint32 mbp = (uint32) mbd->vbe_control_info;
     //printk("MBP: %p\n", mbp);
@@ -243,7 +252,8 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 	if (!quiet)
 		printc(BLACK, GREEN, "done\n");
 
-	do_init("Detecting and initializing PCI devices... ", init_pci());
+
+    do_init("Detecting and initializing PCI devices... ", init_pci());
 	do_init("Initializing syscalls... ", init_syscalls());
 	do_init("Initializing multitasking and setting up the kernel task... ", init_tasking(init_esp0));
 
@@ -253,16 +263,36 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 	GetCPUName();
 	printk("Processor: %s (%s)\n", trim(CPUName), trim(CPUVendor));
 
-    Time t;
-    get_time(&t);
-    printk("%d/%d/%d %02d:%02d:%02d\n", t.month, t.day, t.year, t.hour, t.minute, t.second);
-    printk("%u\n", (unsigned) kern_mktime(&t));
+    //printc(COLOR_WHITE, COLOR_WHITE, "Test123\n");
+
+    //for (int i = 0; i < VESA_HEIGHT; i++) {
+    //    vputchar('A');
+    //    vputchar('\n');
+    //    sleep(250);
+    //}
+    #if 0
+    vputchar('a');
+    vputchar('1');
+    vputchar('\n');
+    vputchar('b');
+    vputchar('\n');
+    vesa_scroll();
+    vputchar('c');
+    vputchar('\n');
+    vputchar('d');
+    vputchar('\n');
+    for (;;);
+    #endif
+    //Time t;
+    //get_time(&t);
+    //printk("%d/%d/%d %02d:%02d:%02d\n", t.month, t.day, t.year, t.hour, t.minute, t.second);
+    //printk("%u\n", (unsigned) kern_mktime(&t));
 	//if (!quiet)
 	//GetCPUSpeed();
 	//printk("CPU Speed: %d\n", GetCPUSpeed());
 
 	//Initialize Nucleus
-	if (!quiet) printk("Initializing Nucleus:\n");
+	/*if (!quiet) printk("Initializing Nucleus:\n");
 	extern long AuthToken;
 	extern bool OpenToken;
 	if (!quiet) printk("  [*] Seeding the PRNG ... ");
@@ -275,7 +305,7 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 	InitSSP();
 	if (!quiet) printc(BLACK, GREEN, "[SUCCESS]\n");
 	if (!quiet) printk("\n");
-	if (quiet) printk("Nucleus initialized successfully\n");
+	if (quiet) printk("Nucleus initialized successfully\n");*/
 
 
 #if 1
@@ -367,16 +397,19 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 #endif
 
 
-
+    //sleep(5000);
+    //printk("done\n");
 	/* Hack-setup a kernel shell on the kernel console */
 	assert(virtual_consoles[0] == &kernel_console);
 	/*task_t *kernel_shell =*/
 
 	//Create a log consoles
 	virtual_consoles[4] = console_create();
+    create_task(&update_statusbar, "statusd", virtual_consoles[4], NULL, 0);
 	create_task(&TSA, "TSA", virtual_consoles[4], NULL, 0);
 
-	create_task(&kshell, "kshell", virtual_consoles[0], NULL, 0);
+
+    create_task(&kshell, "kshell", virtual_consoles[0], NULL, 0);
 
 	halt();
 

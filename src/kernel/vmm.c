@@ -7,6 +7,7 @@
 #include <kernel/console.h> /* printk */
 #include <kernel/pmm.h>
 #include <kernel/elf.h> /* symbol lookup */
+#include <kernel/vesa.h>
 
 // The kernel's page directory
 page_directory_t *kernel_directory = 0;
@@ -609,9 +610,16 @@ void init_paging(unsigned long mbd_mmap_addr, unsigned long mbd_mmap_length, uns
 	INTERRUPT_UNLOCK;
 
 	/* Map the video RAM region (one page is enough for what we use) */
-	_vmm_map(0xb8000, 0xb8000, kernel_directory, true, PAGE_RW);
+	//_vmm_map(0xb8000, 0xb8000, kernel_directory, true, PAGE_RW);
 
-	_vmm_map(0x104AC, 0x104AC, kernel_directory, true, PAGE_RW);
+	//for (int i = 0; i < VESA_PAGES; i++) {
+	//	printk("%i) %p -> %p\n", i, (0xFD000000 + (4096*i)), (VESA_BASE + (4096*i)));
+	//	_vmm_map((VESA_BASE + (4096*i)), (0xFD000000 + (4096*i)), kernel_directory, true, PAGE_RW);
+	//	//_vmm_map((0xa000 + (4096*i)), (0xFD000000 + (4096*i)), kernel_directory, true, PAGE_RW);
+	//}
+
+	//_vmm_map(0xb8000, 0xFD000000, kernel_directory, true, PAGE_RW);
+	//_vmm_map(0xb9000, 0xFD001000, kernel_directory, true, PAGE_RW);
 
 	// Set address 0 as a guard page, to catch NULL pointer dereferences
 	_vmm_map(0, 0, kernel_directory, true /* kernel mode */, PAGE_RO);
