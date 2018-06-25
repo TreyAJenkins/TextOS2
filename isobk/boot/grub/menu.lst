@@ -1,0 +1,7 @@
+default 0
+hiddenmenu
+timeout 3
+
+title TextOS
+kernel /boot/kernel.bin root=initrd quiet
+module /boot/initrd.img

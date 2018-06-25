@@ -1,0 +1,3 @@
+initrd /
+ext2 /ext2
+fat /fat
