@@ -77,6 +77,8 @@ extern volatile list_t ready_queue;
 
 char *kernel_cmdline = NULL;
 bool quiet = false;
+bool splash = false;
+extern bool fullscreen;
 //char *rootdev = NULL;
 
 extern heap_t *kheap;
@@ -126,18 +128,8 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 	/* This should be done EARLY on, since many other things will fail (possibly even panic() output) otherwise.
 	 * NOT earlier than the kernel console setup, though! */
 	init_video();
-    vesa_init(mbd);
 
-
-	if (magic != 0x2BADB002) {
-		panic("Invalid magic received from bootloader!");
-	}
-
-	if (mbd->mods_count == 0) {
-		panic("initrd.img not loaded! Make sure the GRUB config contains a \"module\" line.\nSystem halted.");
-	}
-
-	// Parse the kernel command line
+    // Parse the kernel command line
 	if (mbd->flags & (1 << 2)) {
 		// Duplicate it, so that we know that the address will be mapped when paging is enabled
 		assert(mbd->cmdline != 0);
@@ -149,15 +141,30 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 				quiet = true;
 		}
 
-        if (strstr(kernel_cmdline, " insecure ") != NULL) {
+        if (strstr(kernel_cmdline, "insecure") != NULL) {
             ActiveTSA = 0;
         }
+        if (strstr(kernel_cmdline, "splash") != NULL) {
+            splash = true;
+        }
+	}
+    vesa_init(mbd);
+
+
+	if (magic != 0x2BADB002) {
+		panic("Invalid magic received from bootloader!");
 	}
 
-	//printk("Little Endian: %i\n", endian());
+	if (mbd->mods_count == 0) {
+		panic("initrd.img not loaded! Make sure the GRUB config contains a \"module\" line.\nSystem halted.");
+	}
 
+
+
+	//printk("Little Endian: %i\n", endian());
+    unsigned int ram;
 	if (mbd->flags & 1) {
-		unsigned int ram = (mbd->mem_lower) + (mbd->mem_upper);
+		ram = (mbd->mem_lower) + (mbd->mem_upper);
 		printk("Memory available: %u\n", ram);
 
 		if (!quiet)
@@ -206,8 +213,18 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
     //printk("Framebuffer: 0x%p\n", mbd->framebuffer_addr);
     printk("Bootloader: %s\n", (char*) mbd->bootloader_name);
 
-
-
+    uint32 memerror = 0;
+    for (size_t i = 0x1000000; i < 0x2000000; i++) {
+        uint32 *p = 0xf;
+        //if (*p != 0x0)
+            //memerror++;
+        //if (p[0] != 0xff)
+        //    printk("MEMORY FAILURE AT: %p!\n", p);
+    }
+    if (memerror != 0) {
+        printc(BLACK, RED, "MEMORY MALFUNCTION, %u ERRORS!\n", memerror);
+        printk("CHECKED FROM %p -> %p\n", 0x1000000, ram*1000);
+    }
 
     //for(;;);
 
@@ -233,6 +250,9 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 	}
 	else
 	   init_paging(0, 0, mbd->mem_upper);
+
+
+
     //vputchar('K');
     vesa_stage2();
     //vesa_clear(COLOR_BLACK);

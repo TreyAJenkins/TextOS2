@@ -6,8 +6,8 @@
 #include <kernel/console.h>
 
 #define VESA_MAGIC "VESA"
-#define VESA_HEIGHT 1080
-#define VESA_WIDTH 1920
+#define VESA_HEIGHT 600
+#define VESA_WIDTH 800
 
 typedef struct vesa_control_info {
     char magic[4]; // "VESA"
@@ -111,14 +111,19 @@ void vesa_draw_hline(size_t x0, size_t y0, size_t width, color_t color);
 void vesa_draw_vline(size_t x0, size_t y0, size_t height, color_t color);
 void vesa_draw_button_rect(size_t x0, size_t y0, size_t width, size_t height, bool pushed);
 void vesa_fill_string(size_t x0, size_t y0, size_t width, const char *str, color_t fc);
-void vesa_tty_set_char(size_t x, size_t y, char ch, color_t fgcolor, color_t bgcolor);
+void vesa_tty_set_char(size_t x, size_t y, size_t z, char ch, color_t fgcolor, color_t bgcolor);
 void vesa_secret_set_char(size_t x, size_t y, char ch, color_t fgcolor, color_t bgcolor);
 void vputs_status(int x, const char *str, color_t fg, color_t bg);
+//void vesa_draw_menu(struct menu_t menu, int x, int y);
 void update_statusbar(void);
+void vesa_draw_box(size_t x0, size_t y0, size_t width0, size_t height0, color_t color, bool raw);
+void vesa_test(void);
+void vesa_draw_logo(void);
 
 int vputchar(char c);
 void vesa_init(multiboot_info_t *mbd);
 void vesa_stage2(void);
+void vesa_reset(void);
 
 
 

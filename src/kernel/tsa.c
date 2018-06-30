@@ -17,6 +17,7 @@
 #include <kernel/pci.h>
 #include <kernel/serial.h>
 #include <kernel/elf.h>
+#include <kernel/vesa.h>
 
 int ActiveTSA = 1;
 
@@ -74,7 +75,7 @@ int flagup = 0;
 int react = 0;
 int callerid;
 char callername[64];
-int runOnce = 0;
+int runOnce = 1;
 
 int authenticate(char* message) {
 	if (!runOnce) {
@@ -163,7 +164,7 @@ void TSA(void) {
 
     while (true) {
         if (flagup) {
-            printk("DATA RECEIVED [%s] FROM %s (%i)\n", method, callername, callerid);
+            //printk("DATA RECEIVED [%s] FROM %s (%i)\n", method, callername, callerid);
             if (strcmp(trim(method), "PANIC") == 0) {
                 //printk("PANIC!!");
                 if (authenticate("PANIC"))
@@ -179,12 +180,35 @@ void TSA(void) {
 			} else if (strcmp(trim(method), "ENABLE") == 0) {
 				ActiveTSA = 1;
 				react = 1;
+			} else if (strcmp(trim(method), "VESA_CLEAR") == 0) {
+				if (authenticate("VESA_CLEAR")) {
+					vesa_clear(VESABG);
+				}
+			} else if (strcmp(trim(method), "VESA_RESET") == 0) {
+				if (authenticate("VESA_RESET")) {
+					vesa_reset();
+				}
+			} else if (strcmp(trim(method), "VESA_TEST") == 0) {
+				if (authenticate("VESA_TEST")) {
+					vesa_test();
+				}
+			} else if (strcmp(trim(method), "VESA_REDRAW") == 0) {
+				if (authenticate("VESA_REDRAW")) {
+					vesa_redraw();
+				}
+			} else if (strcmp(trim(method), "VESA_DRAW_LOGO") == 0) {
+				if (authenticate("VESA_DRAW_LOGO")) {
+					vesa_draw_logo();
+				}
+			} else if (strcmp(trim(method), "STATUS") == 0) {
+				printk("TSA: %s\n", (ActiveTSA == 1) ? "ACTIVE" : "DISABLED");
+				react = 1;
 			} else {
 				react = 3;
 			}
             flagup = 0;
         } else {
-            sleep(500);
+            sleep(16);
         }
     }
 	return 0;

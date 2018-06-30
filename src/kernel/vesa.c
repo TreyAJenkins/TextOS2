@@ -6,6 +6,9 @@
 #include <kernel/console.h>
 #include <kernel/kernutil.h>
 #include <kernel/hostinfo.h>
+#include <kernel/tsa.h>
+#include <kernel/time.h>
+#include <logo.h>
 
 #define STRINGIFY(x) #x
 #define MACRO(x)     STRINGIFY(x)
@@ -19,6 +22,8 @@ bool inTextMode = true;
 
 int cursorx = 0;
 int cursory = 1;
+
+bool fullscreen = false;
 
 bool kernel_paniced = false;
 
@@ -37,33 +42,74 @@ struct colored_char_t {
     bool dirty;
 };
 
-struct colored_char_t vesa_screen[VESA_HEIGHT][VESA_WIDTH];
+typedef void (*function)(void);
+struct menu_object_t {
+    char name[32];
+    function action;
+};
 
+struct menu_t {
+    char name[32];
+    int x;
+    int y;
+    int children;
+    struct menu_object_t child[32];
+};
+
+struct colored_char_t vesa_screen[2][VESA_HEIGHT][VESA_WIDTH];
+
+
+void vesa_reset() {
+    vesa_clear(VESABG);
+    cursorx = 0;
+    cursory = 1;
+};
 
 
 void empty_screen() {
-    for (int y = 0; y < vesa_height; y++) {
-        for (int x = 0; x < vesa_width; x++) {
-            vesa_screen[y][x].c = ' ';
-            if (y == 0) {
-                vesa_screen[y][x].bg = BLUE;
-                vesa_screen[y][x].fg = WHITE;
-                vesa_screen[y][x].enabled = true;
-                vesa_screen[y][x].dirty = false;
-            } else {
-                vesa_screen[y][x].bg = VESABG;
-                vesa_screen[y][x].fg = VESABG;
-                vesa_screen[y][x].enabled = false;
-                vesa_screen[y][x].dirty = false;
-            }
+    for (int z = 0; z < 2; z++) {
+        for (int y = 0; y < vesa_height; y++) {
+            for (int x = 0; x < vesa_width; x++) {
+                vesa_screen[z][y][x].c = ' ';
+                if (y == 0) {
+                    vesa_screen[z][y][x].bg = VESABG;
+                    vesa_screen[z][y][x].fg = VESABG;
+                    vesa_screen[z][y][x].enabled = true;
+                    vesa_screen[z][y][x].dirty = false;
+                } else {
+                    vesa_screen[z][y][x].bg = VESABG;
+                    vesa_screen[z][y][x].fg = VESABG;
+                    vesa_screen[z][y][x].enabled = false;
+                    vesa_screen[z][y][x].dirty = false;
+                }
 
+            }
         }
     }
 }
-
+void empty_layer(int z) {
+    for (int y = 0; y < vesa_height; y++) {
+        for (int x = 0; x < vesa_width; x++) {
+            vesa_screen[z][y][x].c = ' ';
+            vesa_screen[z][y][x].bg = VESABG;
+            vesa_screen[z][y][x].fg = VESABG;
+            vesa_screen[z][y][x].enabled = true;
+            vesa_screen[z][y][x].dirty = true;
+        }
+    }
+    vesa_redraw();
+    for (int y = 0; y < vesa_height; y++) {
+        for (int x = 0; x < vesa_width; x++) {
+            if (vesa_screen[z][y][x].enabled) {
+                vesa_screen[z][y][x].enabled = false;
+            }
+        }
+    }
+    vesa_redraw();
+}
+extern bool splash;
 
 void vesa_init(multiboot_info_t *mbd) {
-    empty_screen();
 
     uint32 vbe_control_info_p = mbd->vbe_control_info;
     uint16 vbe_mode_p = mbd->vbe_mode;
@@ -94,12 +140,24 @@ void vesa_init(multiboot_info_t *mbd) {
 
     //vesa_screen = (struct colored_char_t*) kmalloc(vesa_width * vesa_height * sizeof(struct colored_char_t));
 
+    if (splash) {
+        fullscreen = true;
+        vesa_clear(WHITE);
+        vesa_draw_logo();
+    }
+
     //printk("FrameB Size: 0x%p\n", fbsize);
     vesa_pages = (fbsize / 4096) + 1;
     //printk("TextOS VESA driver active\n");
+    //for (size_t i = 0; i < 1024; i++) {
+        /* code */
+    empty_screen();
+    //}
+
     printk("VESA Pages: %i\n", vesa_pages);
     printk("Resolution: %ix%i\n", vesa_mode_info.x_res, vesa_mode_info.y_res);
     printk("Framebuffer: 0x%p\n", vesa_fb_loc);
+    //sleep(5000);
     //for (;;);
 }
 
@@ -111,17 +169,11 @@ void vesa_stage2() {
         //vesa_redraw();
     }
     printk("VESA mapped from 0x%p -> 0x%p\n", vesa_fb_loc, (vesa_fb_loc + (4096*vesa_pages)));
-    //vputchar('A');
-    //printk("\n[0][0] = 0x%p\n", vesa_screen[0][0].enabled);
-    //vputchar('\n');
-    //vputchar('B');
-    //vesa_redraw();
-    //vesa_scroll();
-    //vesa_clear(COLOR_BLACK);
 
-    //vesa_redraw();
-
-
+    splash = false;
+    fullscreen = false;
+    vesa_clear_no_rst(BLACK);
+    vesa_redraw();
 }
 
 
@@ -154,7 +206,7 @@ int vputchar(char c) {
             //printk("cursorX deviated: %i\n", cursorx);
             cursorx = vesa_width;
         }
-        vesa_tty_set_char(cursorx, cursory, c, VESAFG, VESABG);
+        vesa_tty_set_char(cursorx, cursory, 0, c, VESAFG, VESABG);
 
         if (cursorx + 1 == vesa_width) {
             cursory++;
@@ -237,7 +289,7 @@ void vesa_clear(color_t color) {
         SET_COLOR(lfb, device_color);
     RECTANGLE_FOR_EACH_PIXEL_END()
     cursorx = 0;
-    cursory = 0;
+    cursory = 1;
     empty_screen();
 }
 
@@ -424,30 +476,23 @@ void vesa_fill_string(size_t x0, size_t y0, size_t width, const char *str, color
 
 void vesa_redraw() {
     //vesa_clear_no_rst(VESABG);
-    for (int y = 0; y < vesa_height; y++) {
-        for (int x = 0; x < vesa_width; x++) {
-            //cursorx = x;
-            //cursory = y;
-            //vesa_secret_set_char(x, y, ' ', VESABG, VESABG);
-            //if (!vesa_screen[y][x].enabled) {
-            //    vesa_screen[y][x].c = ' ';
-            //    vesa_screen[y][x].fg = VESABG;
-            //    vesa_screen[y][x].bg = VESABG;
-            //    vesa_screen[y][x].enabled = true;
-            //}
-            if (vesa_screen[y][x].enabled) {
-                //printk("(%i, %i): [%c]\n", y, x, vesa_screen[y][x].c);
-                vesa_tty_set_char(x, y, vesa_screen[y][x].c, vesa_screen[y][x].fg, vesa_screen[y][x].bg);
+    for (int z = 0; z < 2; z++) {
+        for (int y = 0; y < vesa_height; y++) {
+            for (int x = 0; x < vesa_width; x++) {
+
+                if (vesa_screen[z][y][x].enabled) {
+                    //printk("(%i, %i): [%c]\n", y, x, vesa_screen[y][x].c);
+                    vesa_tty_set_char(x, y, z, vesa_screen[z][y][x].c, vesa_screen[z][y][x].fg, vesa_screen[z][y][x].bg);
+                }
+                if (vesa_screen[z][y][x].dirty) {
+                    vesa_tty_set_char(x, y, z, ' ', VESABG, VESABG);
+                    vesa_screen[z][y][x].enabled = false;
+                }
+                //if (!vesa_screen[y][x].enabled) {}
+                    //vesa_tty_set_char(x, y, ' ', VESABG, VESABG);
             }
-            if (vesa_screen[y][x].dirty) {
-                vesa_tty_set_char(x, y, ' ', VESABG, VESABG);
-                vesa_screen[y][x].enabled = false;
-            }
-            //if (!vesa_screen[y][x].enabled) {}
-                //vesa_tty_set_char(x, y, ' ', VESABG, VESABG);
         }
     }
-
 }
 
 void vcursor_left() {
@@ -460,7 +505,7 @@ void vputs_status(int x, const char *str, color_t fg, color_t bg) {
     size_t len = strlen(str);
     assert(x + len <= vesa_width);
     for (size_t i = 0; i < len; i++) {
-        vesa_tty_set_char(x + i, 0, str[i], fg, bg);
+        vesa_tty_set_char(x + i, 0, 0, str[i], fg, bg);
 
         //if(x + i == 79) break; // TODO: allow timer spinner
         //NOTE: UNCOMMENT TO ENABLE OLD GRAPHICS real_vmem[x + i] = (status_bgcolor << BGCOLOR) | (status_fgcolor << FGCOLOR) | str[i];
@@ -469,7 +514,9 @@ void vputs_status(int x, const char *str, color_t fg, color_t bg) {
 
 void update_statusbar(void) {
 
-    while (true) {
+    int warning = ActiveTSA;
+
+    while (!fullscreen) {
         if (!kernel_paniced) {
             for (int i = 0; i < vesa_width; i++) {
                 vputs_status(i, " ", BLUE, BLUE);
@@ -595,18 +642,18 @@ void vesa_scroll() {
     for (int y = 1; y < vesa_height-1; y++) {
         //vesa_screen[y] = vesa_screen[y+1];
         for (int x = 0; x < vesa_width; x++) {
-            vesa_screen[y][x].enabled = false;
-            vesa_screen[y][x].dirty = true;
-            vesa_screen[y][x].c = ' ';
-            if (vesa_screen[y+1][x].enabled) {
-                vesa_screen[y][x] = vesa_screen[y+1][x];
-                vesa_screen[y][x].dirty = false;
+            vesa_screen[0][y][x].enabled = false;
+            vesa_screen[0][y][x].dirty = true;
+            vesa_screen[0][y][x].c = ' ';
+            if (vesa_screen[0][y+1][x].enabled) {
+                vesa_screen[0][y][x] = vesa_screen[0][y+1][x];
+                vesa_screen[0][y][x].dirty = false;
 
                 //printk("[%i][%i] = [%i][%i]\n", y, x, y+1, x);
-                vesa_screen[y+1][x].enabled = false;
-                vesa_screen[y+1][x].dirty = true;
+                vesa_screen[0][y+1][x].enabled = false;
+                vesa_screen[0][y+1][x].dirty = true;
 
-                vesa_screen[y+1][x].c = ' ';
+                vesa_screen[0][y+1][x].c = ' ';
 
                 //printk("[%i][%i] = Disabled\n", y+1, x);
             }
@@ -614,36 +661,30 @@ void vesa_scroll() {
         }
         //memcpy(vesa_screen[y], vesa_screen[y+1], sizeof(vesa_screen[y]));
     }
-    //printk("|0,1| = %p\n", vesa_screen[0][1].c);
 
-    //printk("Scrolled\n");
-    //for (int x = 0; x < VESA_WIDTH; x++) {
-    //    vesa_screen[VESA_HEIGHT][x].enabled = true;
-    //}
-    //printk("cy: %i\n", cursory);
     cursory--;
-    //for (int ix = 0; ix < VESA_HEIGHT-1; ix++) {
-    //    for (int i = 0; i < VESA_WIDTH; i++) {
-    //        vesa_secret_set_char(i, ix, ' ', VESABG, VESABG);
-    //    }
-//}/
-    //printk("cyx: %i\n", cursory);
+
     vesa_redraw();
 }
 
-void vesa_tty_set_char(size_t x, size_t y, char ch, color_t fgcolor, color_t bgcolor)
+void vesa_tty_set_char(size_t x, size_t y, size_t z, char ch, color_t fgcolor, color_t bgcolor)
 {
     //printk("[%i][%i]\n", y, x);
-    vesa_screen[y][x].c = ch;
-    vesa_screen[y][x].fg = fgcolor;
-    vesa_screen[y][x].bg = bgcolor;
-    vesa_screen[y][x].enabled = true;
-    vesa_screen[y][x].dirty = false;
+    vesa_screen[z][y][x].c = ch;
+    vesa_screen[z][y][x].fg = fgcolor;
+    vesa_screen[z][y][x].bg = bgcolor;
+    vesa_screen[z][y][x].enabled = true;
+    vesa_screen[z][y][x].dirty = false;
     size_t x0 = x * VESA_CHAR_WIDTH, y0 = y * VESA_CHAR_HEIGHT;
     uint8 *fb = OFFSET(vesa_framebuffer, x0, y0);
     uint8 *font = vga_font_get(ch);
     uint32 device_fc = fgcolor,
              device_bc = bgcolor;
+
+    if (splash) {
+        device_fc = WHITE;
+        device_bc = WHITE;
+    }
 
     RECTANGLE_FOR_EACH_PIXEL_BEGIN(fb, lfb, VESA_CHAR_WIDTH, VESA_CHAR_HEIGHT, x_font, y_font)
         uint32 c;
@@ -681,5 +722,141 @@ void vesa_secret_set_char(size_t x, size_t y, char ch, color_t fgcolor, color_t 
             c = device_bc;
         }
         SET_COLOR(lfb, c);
+    RECTANGLE_FOR_EACH_PIXEL_END()
+}
+
+void vesa_test() {
+    fullscreen = true;
+    //struct menu_t menu = {"[TextOS/2]", vesa_width/2, 1, 3, 0};
+    //struct menu_object_t submenu = {"Test", 0};
+    //menu.child[0] = submenu;
+    //menu.child[1] = submenu;
+    //menu.child[2] = submenu;
+    //vesa_draw_menu(menu);
+    //empty_layer(1);
+    uint32 start = gettickcount();
+    uint32 total = 0;
+    cursorx = 0;
+    cursory = 0;
+    //Clear n Print
+    vesa_clear(WHITE);
+    for (size_t i = 0; i < vesa_width*vesa_height; i++) {
+        vputchar("X");
+    }
+    vesa_clear(BLACK);
+    uint32 cnp = gettickcount() - start;
+    total += cnp;
+    //Set every color
+    for (size_t r = 0; r < 255; r++) {
+        vesa_clear(vesa_device_color(MKCOLOR(r, 0, 0)));
+
+    }
+    for (size_t g = 0; g < 255; g++) {
+        vesa_clear(vesa_device_color(MKCOLOR(0, g, 0)));
+
+    }
+    for (size_t b = 0; b < 255; b++) {
+        vesa_clear(vesa_device_color(MKCOLOR(0, 0, b)));
+    }
+    vesa_clear(BLACK);
+    cursorx = 0;
+    cursory = 1;
+    uint32 sec = gettickcount() - cnp;
+    total += sec;
+    //Pulse
+    vesa_clear(BLACK);
+
+    for (size_t i = 0; i < 4; i++) {
+        int c = i+94;
+        while (c>1) {
+            if ((c % 2) == 0) {
+                c = c / 2;
+            } else {
+                c = (3 * c) + 1;
+            }
+            int z = (c+255) % 256;
+            vesa_draw_box(0, 0, (vesa_width/2)-1, (vesa_height/2)-1, vesa_device_color(MKCOLOR(z, 0, 0)), false);
+            vesa_draw_box((vesa_width/2)+1, 0, (vesa_width/2)-1, (vesa_height/2)-1, vesa_device_color(MKCOLOR(0, z, 0)), false);
+            vesa_draw_box(0, (vesa_height/2)+1, (vesa_width/2)-1, (vesa_height/2)-1, vesa_device_color(MKCOLOR(0, 0, z)), false);
+            vesa_draw_box((vesa_width/2)+1, (vesa_height/2)+1, (vesa_width/2)-1, (vesa_height/2)-1, vesa_device_color(MKCOLOR(z, z, 0)), false);
+
+        }
+    }
+    vesa_clear(BLACK);
+    uint32 pls = gettickcount() - sec;
+    total += pls;
+    //total -= start;
+    fullscreen = false;
+    printk("CHR: %u, CLR: %u, PLS: %u, TOT: %u\n", cnp, sec, pls, total);
+}
+
+void vesa_draw_box(size_t x0, size_t y0, size_t width0, size_t height0, color_t color, bool raw) {
+    size_t x, y, width, height;
+    uint8 *fb;
+    int z = 1;
+    x = x0;
+    y = y0;
+    width = width0;
+    height = height0;
+    fb = OFFSET(vesa_framebuffer, x, y);
+    uint32 device_fc = color;
+
+    if (!raw) {
+        for (int yp = y; yp < y + height; yp++){
+            for (int xp = x; xp < x + width; xp++) {
+                //sleep(100);
+                vesa_tty_set_char(xp, yp, z, " ", color, color);
+            }
+        }
+        vesa_redraw();
+    } else {
+        RECTANGLE_FOR_EACH_PIXEL_BEGIN(fb, lfb, width, height, xp, yp)
+            SET_COLOR(lfb, device_fc);
+        RECTANGLE_FOR_EACH_PIXEL_END()
+    }
+}
+
+void vesa_draw_menu(struct menu_t menu) {
+    int x = menu.x;
+    int y = menu.y;
+    int maxlen = strlen(menu.name);
+
+    for (int i = 0; i < menu.children; i++) {
+        if (maxlen < strlen(menu.child[i].name))
+            maxlen = strlen(menu.child[i].name);
+    }
+    vesa_draw_box(x, y, maxlen+2, menu.children + 2, BLUE, false);
+    vesa_draw_box(x+1, y+1, maxlen, menu.children, WHITE, false);
+
+    int stpos = (((maxlen+2)/2) - (strlen(menu.name)/2)) + x;
+    //int stpos = x + ((maxlen - (strlen(menu.name)))/2);
+    for (int s = 0; s < strlen(menu.name); s++) {
+        printk("%i, %i\n", stpos+s, y);
+        vesa_tty_set_char((stpos+s), y, 1, menu.name[s], WHITE, BLUE);
+    }
+
+    for (int i = 0; i < menu.children; i++) {
+        for (int s = 0; s < strlen(menu.child[i].name); s++) {
+            vesa_tty_set_char(x+1+s, y+1+i, 1, menu.child[i].name[s], BLACK, WHITE);
+        }
+    }
+
+}
+
+void vesa_draw_logo() {
+    int x = (VESA_WIDTH/2) - (logo_width/2);
+    int y = (VESA_HEIGHT/2) - (logo_height/2);
+    //printk("VX: %i, VY: %i, LX: %i, LY: %i, X: %i, Y: %i\n", VESA_WIDTH, VESA_HEIGHT, logo_width, logo_height, x, y);
+    //int x = 0;
+    //int y = 0;
+    uint8 *fb;
+    fb = OFFSET(vesa_framebuffer, x, y);
+
+
+    RECTANGLE_FOR_EACH_PIXEL_BEGIN(fb, lfb, logo_width, logo_height, xp, yp)
+        int pixel[3];
+        LOGO_PIXEL(LOGO_DATA, pixel)
+        color_t color = vesa_device_color(MKCOLOR(pixel[0], pixel[1], pixel[2]));
+        SET_COLOR(lfb, color);
     RECTANGLE_FOR_EACH_PIXEL_END()
 }
