@@ -8,6 +8,6 @@
 - SMBios
 - Dynamic library
 
-###Things Did
+### Things Done
 
 - Graphics mode switching [BUILD 1042]
