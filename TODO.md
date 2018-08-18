@@ -4,6 +4,10 @@
 - Kernel modules
 - Expand UAL
 - Ramdisk support
-- Graphics mode switching
 - ACPI
 - SMBios
+- Dynamic library
+
+###Things Did
+
+- Graphics mode switching [BUILD 1042]
