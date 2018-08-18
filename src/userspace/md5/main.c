@@ -36,26 +36,27 @@ int main(int argc, char *argv[])
 #define BUFSIZE 16384
 	unsigned char *buffer = malloc(BUFSIZE);
     struct MD5Context md5c;
-    
+
     /*	Build parameter quality control.  Verify machine
     	properties were properly set in md5.h and refuse
 	to run if they're not correct.  */
-	
+
 #ifdef CHECK_HARDWARE_PROPERTIES
     /*	Verify unit32 is, in fact, a 32 bit data type.  */
     if (sizeof(uint32) != 4) {
-    	fprintf(stderr, "** Configuration error.  Setting for uint32 in file md5.h\n");
-	fprintf(stderr, "   is incorrect.  This must be a 32 bit data type, but it\n");
-	fprintf(stderr, "   is configured as a %d bit data type.\n", ((int) sizeof(uint32) * 8));
-	return 2;
+        fprintf(stderr, "** Configuration error.  Setting for uint32 in file md5.h\n");
+        fprintf(stderr, "   is incorrect.  This must be a 32 bit data type, but it\n");
+        fprintf(stderr, "   is configured as a %d bit data type.\n", ((int) sizeof(uint32) * 8));
+        free(buffer);
+        return 2;
     }
-    
+
     /*	If HIGHFIRST is not defined, verify that this machine is,
     	in fact, a little-endian architecture.  */
-	
+
 #ifndef HIGHFIRST
     {	uint32 t = 0x12345678;
-    
+
     	if (*((char *) &t) != 0x78) {
     	    fprintf(stderr, "** Configuration error.  Setting for HIGHFIRST in file md5.h\n");
 	    fprintf(stderr, "   is incorrect.  This symbol has not been defined, yet this\n");
@@ -67,7 +68,7 @@ int main(int argc, char *argv[])
     }
 #endif
 #endif
-    
+
     /*	Process command line options.  */
 
     for (i = 1; i < argc; i++) {
@@ -113,15 +114,15 @@ int main(int argc, char *argv[])
 		    cdata = TRUE;
 		    f++;	      /* Mark no infile argument needed */
 		    break;
-		    
+
 		case 'L':   	      /* -L  --  Use lower case letters as hex digits */
 		    hexfmt = "%02x";
 		    break;
-		    
+
 		case 'N':   	      /* -N  --  Don't show file name after sum */
 		    showfile = FALSE;
 		    break;
-		    
+
 		case 'O':   	      /* -Ofname  --  Write output to fname (- = stdout) */
 		    cp++;
                     if (strcmp(cp, "-") != 0) {
@@ -158,7 +159,7 @@ int main(int argc, char *argv[])
 #ifdef CHECK_HARDWARE_PROPERTIES
 #ifdef HIGHFIRST
     {	uint32 t = 0x12345678;
-    
+
     	if (*((char *) &t) == 0x78) {
     	    fprintf(stderr, "** Note.  md5 is not optimally configured for use on this\n");
 	    fprintf(stderr, "   machine.  This is a little-endian (least significant byte\n");
@@ -172,7 +173,7 @@ int main(int argc, char *argv[])
 #endif
 #endif
 		    return 0;
-		    
+
 		case 'V':   	      /* -V  --  Print version number */
 		    printf("%s\n", VERSION);
 		    return 0;
@@ -181,16 +182,16 @@ int main(int argc, char *argv[])
 	    break;
 	}
     }
-    
+
     if (cdata && (i < argc)) {
     	fprintf(stderr, "Cannot specify both -d option and input file.\n");
 	return 2;
     }
-    
+
     if ((i >= argc) && (f == 0)) {
     	f++;
     }
-    
+
     for (; (f > 0) || (i < argc); i++) {
     	if ((!cdata) && (f > 0)) {
 	    ifname = "-";
@@ -201,10 +202,10 @@ int main(int argc, char *argv[])
 
 	if (!cdata) {
 	    int opened = FALSE;
-	    
+
 	    /* If the data weren't supplied on the command line with
 	       the "-d" option, read it now from the input file. */
-	
+
 	    if (strcmp(ifname, "-") != 0) {
 		if ((in = fopen(ifname, "rb")) == NULL) {
 	    	    fprintf(stderr, "Cannot open input file %s\n", ifname);
@@ -235,12 +236,12 @@ int main(int argc, char *argv[])
 
 	    _setmode(_fileno(in), _O_BINARY);
 #endif
-    
+
     	    MD5Init(&md5c);
 	    while ((j = (int) fread(buffer, 1, BUFSIZE, in)) > 0) {
 		MD5Update(&md5c, buffer, (unsigned) j);
 	    }
-	    
+
 	    if (opened) {
 	    	fclose(in);
 	    }

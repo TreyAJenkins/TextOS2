@@ -173,6 +173,7 @@ char **parse_command_line(char *cmdline, int *argc, char ***env_extras) {
 
 	if (*c == 0) {
 		// Nothing to do, i.e. input was all whitespace or such
+		free(argv);
 		return NULL;
 	}
 
@@ -546,6 +547,8 @@ int process_input(char *cmd) {
 
 				// Copy the ending back after all that
 				memcpy(&argv[i + gl.gl_pathc], ending, end - start);
+
+				free(ending);
 
 				// Adjust argc and i for the new stuff
 				argc += (gl.gl_pathc - 1); // - 1 because one was stored where the * was

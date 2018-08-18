@@ -412,6 +412,7 @@ int main(int argc, char **argv) {
 		free(st[i]);
 	}
 
+	free(errnos);
 	free(dirs);
 	free(files);
 	free(st);

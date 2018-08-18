@@ -64,6 +64,8 @@ int main(int argc, char **argv) {
 			close(fd);
 	}
 
+	free(buf);
+
 	if (!error)
 		return 0;
 	else
