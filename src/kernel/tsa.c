@@ -39,7 +39,7 @@ const char* ReadConfig(char* key) {
 	if (fd < 0) {
 		//Invalid path
 		kfree(config);
-		if (key == "KEYMAP") {
+		if (strncmp(key, "KEYMAP", 6) == 0) {
 			return "/etc/drivers/keyboard/EN_US.kmp"; // Default Keymap
 		}
 		return "";
