@@ -65,7 +65,7 @@ bool isVM(void) {
 double GetCPUSpeed(void) {
     int xor = 0;
     int start = kern_time();
-    double iterations;
+    double iterations = 0;
     while (start >= kern_time()) {
         iterations++;
         xor = xor^xor;
