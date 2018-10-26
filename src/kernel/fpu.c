@@ -37,7 +37,7 @@ static uint32 no_fpu_interrupt_handler(uint32 esp) {
 	asm volatile("clts");
 
 	// Next, save the state for the previous FPU task, if any
-	if (last_fpu_task != NULL) {
+	if (last_fpu_task != NULL && last_fpu_task->fpu_state != NULL) {
 		assert(last_fpu_task->fpu_state != NULL);
 		asm volatile("fxsave %0" : "=m"(*last_fpu_task->fpu_state) : : "memory");
 	}
