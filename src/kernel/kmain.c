@@ -425,7 +425,7 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 
 	//Create a log consoles
 	virtual_consoles[4] = console_create();
-    create_task(&update_statusbar, "statusd", virtual_consoles[4], NULL, 0);
+    statusd();
 	create_task(&TSA, "TSA", virtual_consoles[4], NULL, 0);
 
 

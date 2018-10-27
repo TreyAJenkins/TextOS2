@@ -637,6 +637,10 @@ void update_statusbar(void) {
     #endif
 }
 
+void statusd() {
+    create_task(&update_statusbar, "statusd", virtual_consoles[4], NULL, 0);
+}
+
 void vesa_scroll() {
 
     for (int y = 1; y < vesa_height-1; y++) {

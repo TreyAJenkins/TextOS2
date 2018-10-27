@@ -116,6 +116,7 @@ void vesa_secret_set_char(size_t x, size_t y, char ch, color_t fgcolor, color_t 
 void vputs_status(int x, const char *str, color_t fg, color_t bg);
 //void vesa_draw_menu(struct menu_t menu, int x, int y);
 void update_statusbar(void);
+void statusd(void);
 void vesa_draw_box(size_t x0, size_t y0, size_t width0, size_t height0, color_t color, bool raw);
 void vesa_test(void);
 void vesa_draw_logo(void);
@@ -125,8 +126,8 @@ void vesa_init(multiboot_info_t *mbd);
 void vesa_stage2(void);
 void vesa_reset(void);
 
-
-
+bool inTextMode;
+bool fullscreen;
 
 
 #endif
