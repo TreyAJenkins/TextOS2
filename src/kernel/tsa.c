@@ -18,6 +18,8 @@
 #include <kernel/serial.h>
 #include <kernel/elf.h>
 #include <kernel/vesa.h>
+#include <kernel/backtrace.h>
+#include <kernel/argon.h>
 
 int ActiveTSA = 1;
 
@@ -99,13 +101,19 @@ int authenticate(char* message) {
     	printk("[y/N] > ");
 
     	unsigned char ch = getchar();
+		console_switch(old);
+
     	if (ch == 'y' || ch == 'Y') {
         	react = 1;
-    	} else {
+			printk("\n\n");
+			return 1;
+		} else {
         	react = 2;
-    	}
+			printk("\n\n");
+			return 0;
+		}
 
-		printk("\n\n");
+
 
     	//msgboxc(RED, RED, WHITE, "SAMPLE MESSAGE");
     	///sleep(5000);
@@ -113,15 +121,11 @@ int authenticate(char* message) {
 
     	//sleep(5000);
 
-    	console_switch(old);
 	} else {
 		react = 1;
-	}
-
-	if (react == 1)
 		return 1;
-	else
-		return 0;
+	}
+	return 0;
 
     //jmp();
 }
@@ -203,6 +207,23 @@ void TSA(void) {
 			} else if (strcmp(trim(method), "STATUS") == 0) {
 				printk("TSA: %s\n", (ActiveTSA == 1) ? "ACTIVE" : "DISABLED");
 				react = 1;
+			} else if (strcmp(trim(method), "FIND_ADDRESS") == 0) {
+				printk("%s: %p\n", data, func_to_addr(data, 0));
+				react = 1;
+			} else if (strcmp(trim(method), "DUMP_SYMBS") == 0) {
+				dump_symbs();
+				react = 1;
+			} else if (strcmp(trim(method), "EXECUTE") == 0) {
+				void *addr = func_to_addr(data, 0);
+				if (addr == 0) {
+					printk("Function '%s' not found\n", data);
+					react = 2;
+				} else {
+					if (authenticate(data)) {
+						printk("Jumping to %p\n", addr);
+						((void (*)(void))addr)();
+					}
+				}
 			} else {
 				react = 3;
 			}
