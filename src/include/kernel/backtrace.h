@@ -9,6 +9,8 @@ struct symbol {
 };
 
 struct symbol *addr_to_func(uint32 eip);
+uint32 func_to_addr(char* name, int space);
+int dump_symbs();
 
 #define BACKTRACE_MAX 16
 // Lower indexes = deeper nesting

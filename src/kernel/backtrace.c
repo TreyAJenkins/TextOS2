@@ -5,6 +5,33 @@
 
 extern struct symbol *kernel_syms;
 
+// Translate a function name to an EIP value, space = 0 for kernel, 1 for userspace
+uint32 func_to_addr(char* name, int space) {
+	if (space == 0) {
+		struct symbol *symp = kernel_syms;
+		while (symp->eip && symp->name) {
+			if (strcmp(name, symp->name) == 0) {
+				return symp->eip;
+			}
+			symp++;
+		}
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+int dump_symbs() {
+	struct symbol *symp = kernel_syms;
+	printk("\n----[ Kernel Symbols ]----\n");
+
+	while (symp->eip && symp->name) {
+		printk("%p: %s\n", symp->eip, symp->name);
+		symp++;
+	}
+	return 0;
+}
+
 // Translate an EIP value (e.g. 0x104e3c) to a function name
 struct symbol *addr_to_func(uint32 addr) {
 	if (!(
