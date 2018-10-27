@@ -331,7 +331,9 @@ uint32 keyboard_callback(uint32 esp) {
 		//kill_pid(current_task->id);
 	//}
 	else if ( !(scancode & 0x80) ) { // scancode isn't simply a supported key being released
-		printk("Not implemented (scancode = 0x%02x)\n", scancode);
+		if (inTextMode) {
+			printk("Not implemented (scancode = 0x%02x)\n", scancode);
+		}
 		return esp;
 	}
 	else if (scancode & 0x80) {

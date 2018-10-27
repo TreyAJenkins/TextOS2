@@ -19,7 +19,6 @@
 #include <kernel/elf.h>
 #include <kernel/vesa.h>
 #include <kernel/backtrace.h>
-#include <kernel/argon.h>
 
 int ActiveTSA = 1;
 
