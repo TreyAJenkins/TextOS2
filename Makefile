@@ -45,8 +45,8 @@ QEMU := qemu-system-i386
 #KVM := -machine accel=kvm
 KVM :=
 
-all: compile strip build
 debug: compile build
+all: compile strip build
 
 compile: $(OBJFILES)
 	echo "GENERATING BUILD: ${BUILDID}"
@@ -76,7 +76,7 @@ build:
 	-@rm -f serial-output
 
 strip:
-	#@strip kernel.bin
+	@strip kernel.bin
 
 
 
