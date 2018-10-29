@@ -60,7 +60,7 @@ void scrollback_reset(void);
 extern volatile console_t *current_console;
 extern console_t kernel_console;
 
-#define NUM_VIRTUAL_CONSOLES 5
+#define NUM_VIRTUAL_CONSOLES 128
 extern console_t *virtual_consoles[NUM_VIRTUAL_CONSOLES];
 
 void console_destroy(console_t *con);

@@ -42,7 +42,7 @@ static void force_update_cursor(void);
 //void redraw_screen(void);
 
 /* A set of virtual consoles, accessed using Alt+F1, Alt+F2, ..., Alt+Fn */
-#define NUM_VIRTUAL_CONSOLES 5
+#define NUM_VIRTUAL_CONSOLES 128
 console_t *virtual_consoles[NUM_VIRTUAL_CONSOLES];
 /* These are set up properly in kmain() */
 

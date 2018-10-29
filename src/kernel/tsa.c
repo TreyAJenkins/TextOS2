@@ -195,6 +195,9 @@ void TSA(void) {
 				if (authenticate("VESA_TEST")) {
 					vesa_test();
 				}
+			} else if (strcmp(trim(method), "XFS_TEST_PARTITION") == 0) {
+				xfs_test_partition();
+				react = 1;
 			} else if (strcmp(trim(method), "VESA_REDRAW") == 0) {
 				if (authenticate("VESA_REDRAW")) {
 					vesa_redraw();

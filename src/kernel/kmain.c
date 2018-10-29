@@ -339,6 +339,10 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 			continue;
 
 		for (int part = 0; part < 4; part++) {
+            if (devices[disk].partition[part].exists && devices[disk].partition[part].type == 0xA7) {
+                printk("Found XFS partition at Disk%i/%i!\n", disk, part);
+            }
+
 			if (devices[disk].partition[part].exists &&
 					(devices[disk].partition[part].type == PART_FAT32 ||
 					 devices[disk].partition[part].type == PART_FAT32_LBA))
