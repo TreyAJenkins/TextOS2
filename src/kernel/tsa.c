@@ -222,7 +222,7 @@ void TSA(void) {
 					react = 2;
 				} else {
 					if (authenticate(data)) {
-						printk("Jumping to %p\n", addr);
+						printk("Jumping to %p\n\n", addr);
 						((void (*)(void))addr)();
 					}
 				}

@@ -26,7 +26,9 @@ struct __attribute__((__packed__)) XFS_MAP  {
 
 bool xfs_detect(ata_device_t *dev, uint8 part);
 int xfs_partition(uint8 disk, uint8 part);
-
+int xfs_read_select(uint8 disk, uint8 part, char* name, void* data, uint32 pos, uint32 size);
+int xfs_read_raw(uint8 disk, uint8 part, char* name, char* data, int entryn);
+int xfs_write(uint8 disk, uint8 part, char* name, void* data, uint32 size);
 
 
 #endif

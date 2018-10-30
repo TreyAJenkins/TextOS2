@@ -1,4 +1,4 @@
-// TreyCorp Nucleus Security Suite
+// TextOS Nucleus Security Suite
 #include <kernel/kernutil.h>
 #include <kernel/timer.h>
 #include <kernel/backtrace.h>
@@ -63,7 +63,7 @@ void __stack_chk_fail(void) {
     if (!OpenToken) {
         printk("\n-------------------------------------------\n");
         print_backtrace();
-        panic("TreyCorp Nucleus: STACK SMASHING DETECTED!");
+        panic("TExtOS Nucleus: STACK SMASHING DETECTED!");
     } else {
         OpenToken = false;
     }

@@ -1,0 +1,55 @@
+
+I use a Custom Filesystem - What Bootloader Solution is right for me?
+From OSDev Wiki
+
+While rolling your own filesystem is not recommended, you may find yourself in a place where a specially designed filesystem is a must have. The most obvious solution is to write a custom bootloader specifically designed for the new filesystem, or you could use an existing bootloader - GRUB. This guide shows how you can use this tool for your work.
+What GRUB can do
+
+GRUB allows you to do a lot of things that you wouldn't be able to do with any other bootloader due to its ability to load an OS in raw sectors from a floppy or hard drive.
+
+I must give a small overview of the boot process for an OS that is installed in a partition other than the first partition, which is also not the only OS installed on the hard Disk.
+
+The Master Boot Record holds the Boot Manager for the disk. GRUB is technically a boot loader, but its functionality far exceeds that of a conventional boot loader, and crosses the line of a Boot Manager very convincingly. Upon completion of its initialization sequence, the BIOS, in order of the priority set in the CMOS, loads a bootloader from the default boot disk. Assume that the HDD is given priority for our example. So the BIOS loads the first HDD's (or second, or third, or fourth, depending on what you set the boot order to), Master Boot Record into RAM at 0x7C00 and jumps to it, passing the drive number via a register. The MBR contains code to bootstrap an OS, or a second stage of itself, depending on how considerate the bootloader in question is. GRUB loads its second stage, and displays a menu listing all of the OSs recorded in its configuration file.
+
+These OSs have given GRUB commands on how to boot them:
+
+    For Windows, a record is placed which indicates the partition Windows is installed on, and an instruction to chainload one sector (512 bytes) into RAM at 0x7C00, and jump to it; In other words, simply load the Windows bootloader into RAM as if it was placed there by the BIOS.
+    For OSs that use EXT, ReiserFS, or other directly supported GRUB filesystems, you have the convenience of being able to ask GRUB to look into the partition and find your kernel file and load it into memory.
+    For OSs that do not use a GRUB supported File system, the convention has been to simply ask GRUB to chainload the partition boot sector for your OSs partition and jump to it. However, using some logic, it is possible to avoid having to do anything whatsoever in real mode, or having to write a bootloader, even for a custom file system, and have GRUB do all the work. 
+
+The GRUB 'kernel' and 'chainloader' commands
+
+GRUB is able to make a particular partition on a hard drive the 'root' for its operations. It can do so in one of two ways:
+
+    Simply take note of the fact that the user wants to set that partition as the root, or
+    If the partition has a recognizable file system (one known by GRUB), GRUB can also mount it for file system parsing to actually locate a kernel image on disk. 
+
+When a partition is chosen as the root for GRUB's operations, there are two ways to load an executable image:
+
+The 'kernel' command: The kernel command either reads an executable, Multiboot Compliant image from a recognized File system, or as absolute sectors from the start of the partition.
+
+The 'chainloader' command: The chainloader command loads an executable image of the assumed format 'binary' at 0x7C00 and jumps to the address 0x7C00.
+How may I use this information to ensure that GRUB can load an executable image off my custom FS?
+
+Take some time to think. You are designing a custom filesystem. There is therefore no restriction on where on the partition (which absolute sector) the FS header, and therefore the FS itself should start. You are completely free to, in your FS specification, state that a partition complying with YourOwnFS should not touch the 1st, say, ~16-32KB, and that it is reserved for boot information, or other useful data. Therefore, in the Partition Table, your partition is stated to begin at Sector X, but the Fs itself may begin at sector X+BOOT_RESERVED_OFFSET. This way, we replace the old, completely illogical standard which dictates that a partition's boot sector contains boot code, and, using the reserved sectors for your FS, place an executable image at the absolute beginning of the partition containing a full, conveniently sized boot program for your OS.
+
+To load the program, your instructions to GRUB will be something like the following:
+
+rootnoverify (hd0,PARTITION_NUMBER)
+kernel 0+BOOT_RESERVED_OFFSET
+boot
+
+The kernel command loads a Multiboot compliant kernel, and in this case, we have specified an absolute number of sectors to load. The 'kernel' command can automatically detect if the file it's loading from the sectors is an ELF program. In other words, your 'bootloader' may even be a full ELF program, using this trick. In fact, you may even decide to place your kernel's executable image as the first N sectors, and have GRUB ELF load the kernel as absolute sectors, and not have to worry about parsing your custom FS at all.
+
+Your kernel image, now loaded into memory (if it's an ELF, you can link it to 1MB physical), can then set itself up painlessly, and it also gets the benefit of the GRUB Multiboot Data structure passed to it. This method completely invalidates the need to write a real mode bootloader. There are other reasons why it is probably best that Hobbyist OS Developers use this method:
+
+The method implies that GRUB is placed into the MBR of a hobby OS partition installation, or even whole disk installation. If all hobby OSs use this method, whether or not they use a custom FS, it gives them the advantage of being able to load a full program, in protected mode via GRUB, and bypassing the Real Mode bootloader stage completely. No more problems with writing an efficient program in 446 bytes.
+Retrieved from "https://wiki.osdev.org/index.php?title=I_use_a_Custom_Filesystem_-_What_Bootloader_Solution_is_right_for_me%3F&oldid=20253"
+Categories:
+
+    FilesystemsFAQ
+
+    This page was last modified on 22 January 2017, at 20:55.
+    This page has been accessed 22,313 times.
+
+

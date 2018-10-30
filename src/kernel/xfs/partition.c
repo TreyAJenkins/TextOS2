@@ -32,11 +32,12 @@ int xfs_partition(uint8 disk, uint8 part) {
 }
 
 int xfs_format(uint8 disk, uint8 part) {
-   //printk("Formatting Disk%i/%i (%i sectors) ", disk, part, devices[disk].partition[part].total_sectors - devices[disk].partition[part].start_lba);
-    char blank[512] = {0};
-    for (uint32 i = devices[disk].partition[part].start_lba; i < devices[disk].partition[part].total_sectors; i++) {
-        disk_write(&devices[disk], i, 512, &blank);
+    printk("Formatting Disk%i/%i (%i sectors) ", disk, part, devices[disk].partition[part].total_sectors - devices[disk].partition[part].start_lba);
+    char blank[512] = {1};
+    for (uint32 i = 0; i < devices[disk].partition[part].total_sectors; i++) {
+        disk_write(&devices[disk], devices[disk].partition[part].start_lba + i, 512, &blank);
     }
+    printk("\n");
    //printk("done\n");
     xfs_partition(disk, part);
 }

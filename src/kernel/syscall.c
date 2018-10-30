@@ -7,6 +7,8 @@
 #include <kernel/backtrace.h>
 #include <sys/time.h>
 #include <kernel/tsa.h>
+#include <kernel/xfs.h>
+#include <kernel/pmm.h>
 
 // strace-like mechanism that prints all syscalls and their parameters
 #define SYSCALL_DEBUG 0
@@ -38,6 +40,14 @@ int sys_execve(const char *path, char **argv, char **envp);
 char *sys_getcwd(char *buf, size_t size);
 int sys_pipe(int fildes[2]);
 ssize_t sys_readlink(const char *pathname, char *buf, size_t bufsiz);
+
+int xfs_read_select(uint8 disk, uint8 part, char* name, void* data, uint32 pos, uint32 size);
+int xfs_read_raw(uint8 disk, uint8 part, char* name, char* data, int entryn);
+int xfs_write(uint8 disk, uint8 part, char* name, void* data, uint32 size);
+int xfs_partition(uint8 disk, uint8 part);
+
+uint32 pmm_bytes_free();
+uint32 pmm_bytes_used();
 
 struct syscall_entry syscalls[] = {
 /*  { &function, num_args, return_size }, */
@@ -73,7 +83,14 @@ struct syscall_entry syscalls[] = {
 	{ &sys_pipe, 1, 32 },
 	{ &sys_lstat, 2, 32 }, /* 30 */
 	{ &sys_readlink, 3, 32 },
-	{ &dropbox, 2, 32}
+	{ &dropbox, 2, 32},
+	{ &xfs_write, 5, 32},
+	{ &xfs_read_raw, 5, 32},
+	{ &xfs_read_select, 6, 32}, /* 35 */
+	{ &xfs_partition, 2, 32},
+	{ &pmm_bytes_free, 0, 32},
+	{ &pmm_bytes_used, 0, 32}
+
 };
 
 uint32 num_syscalls = 0;
