@@ -45,6 +45,8 @@ int xfs_read_select(uint8 disk, uint8 part, char* name, void* data, uint32 pos, 
 int xfs_read_raw(uint8 disk, uint8 part, char* name, char* data, int entryn);
 int xfs_write(uint8 disk, uint8 part, char* name, void* data, uint32 size);
 int xfs_partition(uint8 disk, uint8 part);
+uint32 xfs_find_size(uint8 disk, uint8 part, char* name);
+int xfs_dump(uint8 disk, uint8 part);
 
 uint32 pmm_bytes_free();
 uint32 pmm_bytes_used();
@@ -89,7 +91,9 @@ struct syscall_entry syscalls[] = {
 	{ &xfs_read_select, 6, 32}, /* 35 */
 	{ &xfs_partition, 2, 32},
 	{ &pmm_bytes_free, 0, 32},
-	{ &pmm_bytes_used, 0, 32}
+	{ &pmm_bytes_used, 0, 32},
+	{ &xfs_find_size, 3, 32},
+	{ &xfs_dump, 2, 32} /* 40 */
 
 };
 

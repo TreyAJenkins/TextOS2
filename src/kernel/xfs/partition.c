@@ -46,32 +46,31 @@ int xfs_test_format() {
     xfs_format(0, 0);
 }
 
-int xfs_test_dump() {
+int xfs_dump(uint8 disk, uint8 part) {
     uint32 usage = 0;
     uint32 actual = 0;
     struct XFS_MAP map = {0};
-    disk_read(&devices[0], devices[0].partition[0].start_lba, 512, &map);
+    disk_read(&devices[disk], devices[disk].partition[part].start_lba, 512, &map);
     assert(strncmp(map.MAGIC, "XFS", 3) == 0);
     printk("Start LBA: %i\n", devices[0].partition[0].start_lba);
     usage += 512;
     actual = 0;
+    int maps = 1;
     for (int i = 0; i < 12; i++) {
         usage += map.ENTRY[i].SIZE;
         printk("Map %i, Sector %i :: Size: %i, Name: %s\n", map.ID, map.ENTRY[i].SECTOR, map.ENTRY[i].SIZE, map.ENTRY[i].NAME);
         assert(map.ENTRY[i].CHECK == 1);
-        actual = map.ENTRY[i].SECTOR;
     }
     while (map.NEXT != 0) {
-        disk_read(&devices[0], devices[0].partition[0].start_lba + (map.NEXT * 1*1), 512, &map);
+        disk_read(&devices[disk], devices[disk].partition[part].start_lba + (map.NEXT * 1*1), 512, &map);
         assert(strncmp(map.MAGIC, "XFS", 3) == 0);
         for (int i = 0; i < 12; i++) {
             usage += map.ENTRY[i].SIZE;
-            printk("Map %i, Sector %i :: Size: %i, Name: %s\n", map.ID, map.ENTRY[i].SECTOR, map.ENTRY[i].SIZE, map.ENTRY[i].NAME);
-            actual = map.ENTRY[i].SECTOR;
+            printk("Map #%i, Sector %i :: Size: %i, Name: %s\n", map.ID/13, map.ENTRY[i].SECTOR, map.ENTRY[i].SIZE, map.ENTRY[i].NAME);
         }
+        actual++;
     }
-    actual = devices[0].partition[0].start_lba - actual;
-    printk("Usage: %i\nActual:%i\n", usage, actual*512);
+    printk("Usage: %i\nActual:%i\n", usage, (actual*512)+usage);
 }
 
 int xfs_test_partition() {
