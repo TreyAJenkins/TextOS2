@@ -14,7 +14,7 @@ struct XFS_MAP;
 struct XFS_SECTOR;
 
 uint32 xfs_find_entry(ata_device_t *dev, uint8 part) {
-    struct XFS_MAP map = {0};
+    volatile struct XFS_MAP map = {0};
     disk_read(dev, dev->partition[part].start_lba, 512, &map);
     assert(strncmp(map.MAGIC, "XFS", 3) == 0);
     for (int i = 0; i < 12; i++) {
@@ -38,27 +38,61 @@ uint32 xfs_find_entry(ata_device_t *dev, uint8 part) {
     }
 
     //Add another map
-    struct XFS_MAP nmap = {0};
-    struct XFS_ENTRY nentry = {0};
+
+    volatile struct XFS_MAP nmap = {0};
+    volatile struct XFS_ENTRY nentry = {0};
     for (int i = 0; i < 12; i++) {
         nmap.ID = map.ID + 13;
         nentry.SECTOR = (i+1) + ((nmap.ID) * 12);
         nmap.ENTRY[i] = nentry;
     }
     memcpy(nmap.MAGIC, "XFS", 3);
-    disk_write(dev, dev->partition[part].start_lba + (nmap.ID), 512, &nmap);
+    volatile int mr = disk_write(dev, dev->partition[part].start_lba + (nmap.ID), 512, &nmap);
     map.NEXT = nmap.ID;
     assert(nmap.ID != 0);
-    disk_write(dev, dev->partition[part].start_lba + (map.ID), 512, &map);
-    disk_read(dev, dev->partition[part].start_lba + (map.ID), 512, &map);
+    volatile int w = disk_write(dev, dev->partition[part].start_lba + (map.ID), 512, &map);
+    volatile int r = disk_read(dev, dev->partition[part].start_lba + (map.ID), 512, &map);
     //printk("Created map %i\n", map.NEXT);
     assert(map.NEXT == nmap.ID);
     return (nmap.ID * 12) + 1;
 }
 
-bool xfs_exists(uint8 disk, uint8 part, char* name) {
+int xfs_create_gap(uint8 disk, uint8 part, int size) {
+    ata_device_t *dev = &devices[disk];
+
+    int maps = size / 512;
+    if ((size % 512) > 0)
+        maps++;
+
+    volatile uint32 entryloc = xfs_find_entry(dev, part);
+    int secid = entryloc - 1;
+    int mapid = (secid - (mapid % 12)) / 12;
+    secid %= 12;
+
+    int target = mapid + maps + 1;
+    printk("target: %i, size: %i\n", target, size);
+
     struct XFS_MAP map = {0};
-    disk_read(&devices[0], devices[0].partition[0].start_lba, 512, &map);
+    disk_read(dev, dev->partition[part].start_lba + (mapid), 512, &map);
+    map.NEXT = target;
+    disk_write(dev, dev->partition[part].start_lba + (mapid), 512, &map);
+
+    volatile struct XFS_MAP nmap = {0};
+    volatile struct XFS_ENTRY nentry = {0};
+    for (int i = 0; i < 12; i++) {
+        nmap.ID = target;
+        nentry.SECTOR = (i+1) + ((nmap.ID) * 12);
+        nmap.ENTRY[i] = nentry;
+    }
+    memcpy(nmap.MAGIC, "XFS", 3);
+    volatile int mr = disk_write(dev, dev->partition[part].start_lba + (nmap.ID), 512, &nmap);
+
+    return map.ID + 13;
+}
+
+bool xfs_exists(uint8 disk, uint8 part, char* name) {
+    volatile struct XFS_MAP map = {0};
+    disk_read(&devices[disk], devices[disk].partition[disk].start_lba, 512, &map);
     assert(strncmp(map.MAGIC, "XFS", 3) == 0);
 
     int namelen = (strlen(name));
@@ -80,7 +114,7 @@ bool xfs_exists(uint8 disk, uint8 part, char* name) {
             return 0;
         }
         if (foundRoot == 0) {
-            disk_read(&devices[0], devices[0].partition[0].start_lba + (map.NEXT), 512, &map);
+            disk_read(&devices[disk], devices[disk].partition[disk].start_lba + (map.NEXT), 512, &map);
         }
     }
     return 0;
@@ -92,9 +126,9 @@ int xfs_write(uint8 disk, uint8 part, char* name, void* data, uint32 size) {
     uint32 ipos = 0;
     char* buffa = data;
 
-    uint32 entryloc = xfs_find_entry(dev, part);
-    uint32 mapid = 0;
-    uint32 secid = 0;
+    volatile uint32 entryloc = xfs_find_entry(dev, part);
+    volatile uint32 mapid = 0;
+    volatile uint32 secid = 0;
 
     int root = 1;
 
@@ -106,7 +140,7 @@ int xfs_write(uint8 disk, uint8 part, char* name, void* data, uint32 size) {
         mapid = 0;
         secid = entryloc - 1;
 
-        struct XFS_MAP map;
+        volatile struct XFS_MAP map;
         disk_read(dev, dev->partition[part].start_lba, 512, &map);
         assert(strncmp(map.MAGIC, "XFS", 3) == 0);
 
@@ -117,14 +151,11 @@ int xfs_write(uint8 disk, uint8 part, char* name, void* data, uint32 size) {
 
         int currmap = map.ID;
         while (currmap != mapid) {
-            if (map.NEXT == NULL) {
+            while (map.NEXT == NULL) {
+                xfs_find_entry(dev, part);
                 disk_read(dev, dev->partition[part].start_lba + (map.ID), 512, &map);
             }
-            if (map.NEXT == NULL) {
-                xfs_find_entry(dev, part);
-            }
-
-            assert(map.NEXT != NULL);
+            //assert(map.NEXT != NULL);
             //printk("Next: %i\n", map.NEXT);
             disk_read(dev, dev->partition[part].start_lba + (map.NEXT * 1*1), 512, &map);
             assert(strncmp(map.MAGIC, "XFS", 3) == 0);
@@ -183,21 +214,21 @@ int xfs_write(uint8 disk, uint8 part, char* name, void* data, uint32 size) {
 }
 
 int xfs_read_raw(uint8 disk, uint8 part, char* name, char* data, int entryn) {
-    struct XFS_MAP map;
-    disk_read(&devices[0], devices[0].partition[0].start_lba, 512, &map);
+    volatile struct XFS_MAP map;
+    disk_read(&devices[disk], devices[disk].partition[disk].start_lba, 512, &map);
     assert(strncmp(map.MAGIC, "XFS", 3) == 0);
 
-    int namelen = (strlen(name));
-    assert(namelen < 32);
 
     bool foundRoot = 0;
-    struct XFS_ENTRY xentry = {0};
-
+    volatile struct XFS_ENTRY xentry = {0};
+    int namelen = 32;
 
     while (!foundRoot) {
         for (int i = 0; i < 12; i++) {
             if (map.ENTRY[i].ROOT) {
-                if (strncmp(name, map.ENTRY[i].NAME, namelen) == 0) {
+                namelen = (strlen(map.ENTRY[i].NAME)) % 32;
+                //printk("%s == %s [%i]\n", name, map.ENTRY[i].NAME, namelen);
+                if (strncmp(name, map.ENTRY[i].NAME, namelen) == 0 && namelen == (strlen(name))) {
                     foundRoot = 1;
                     xentry = map.ENTRY[i];
                 }
@@ -208,7 +239,7 @@ int xfs_read_raw(uint8 disk, uint8 part, char* name, char* data, int entryn) {
             return -1;
         }
         if (foundRoot == 0) {
-            disk_read(&devices[0], devices[0].partition[0].start_lba + (map.NEXT), 512, &map);
+            disk_read(&devices[disk], devices[disk].partition[disk].start_lba + (map.NEXT), 512, &map);
         }
     }
     int mapid = 0;
@@ -228,8 +259,12 @@ int xfs_read_raw(uint8 disk, uint8 part, char* name, char* data, int entryn) {
 
         int currmap = map.ID;
         while (currmap != mapid) {
-            assert(map.NEXT == NULL);
-            disk_read(&devices[0], devices[0].partition[0].start_lba + (map.NEXT * 1*1), 512, &map);
+            while (map.NEXT == NULL) {
+                xfs_find_entry(&devices[disk], part);
+                disk_read(&devices[disk], devices[disk].partition[part].start_lba + (map.ID), 512, &map);
+            }
+            //assert(map.NEXT == NULL);
+            disk_read(&devices[disk], devices[disk].partition[disk].start_lba + (map.NEXT * 1*1), 512, &map);
             assert(strncmp(map.MAGIC, "XFS", 3) == 0);
             currmap = map.ID;
         }
@@ -239,7 +274,7 @@ int xfs_read_raw(uint8 disk, uint8 part, char* name, char* data, int entryn) {
     //disk_write(dev, dev->partition[part].start_lba + (map.ENTRY[secid].SECTOR), 512, &outbuf);
     //printk("SecID: %i\n", secid);
     //printk("Sector: %i\n", map.ENTRY[secid].SECTOR);
-    disk_read(&devices[0], devices[0].partition[0].start_lba + (map.ENTRY[secid].SECTOR), 512, data);
+    disk_read(&devices[disk], devices[disk].partition[disk].start_lba + (map.ENTRY[secid].SECTOR), 512, data);
 
     return map.ENTRY[secid].SIZE;
 }
@@ -328,4 +363,7 @@ int xfs_test_write_loop() {
     while (1){
         xfs_test_write();
     }
+}
+int xfs_test_gap() {
+    xfs_create_gap(0, 0, 8192);
 }

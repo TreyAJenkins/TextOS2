@@ -48,6 +48,10 @@ int xfs_partition(uint8 disk, uint8 part);
 uint32 xfs_find_size(uint8 disk, uint8 part, char* name);
 int xfs_dump(uint8 disk, uint8 part);
 
+int install_core(int disk, void* core, uint32 size);
+int install_mbr(int disk, char* mbr);
+int install_kernel(int disk, char* kernel, int size, int offset);
+
 uint32 pmm_bytes_free();
 uint32 pmm_bytes_used();
 
@@ -93,7 +97,11 @@ struct syscall_entry syscalls[] = {
 	{ &pmm_bytes_free, 0, 32},
 	{ &pmm_bytes_used, 0, 32},
 	{ &xfs_find_size, 3, 32},
-	{ &xfs_dump, 2, 32} /* 40 */
+	{ &xfs_dump, 2, 32}, /* 40 */
+	{ &install_core, 3, 32},
+	{ &install_mbr, 2, 32},
+	{ &install_kernel, 4, 32},
+	{ &func_to_addr, 2, 32} /* 44 */
 
 };
 

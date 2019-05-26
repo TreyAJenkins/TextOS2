@@ -125,6 +125,7 @@ int vputchar(char c);
 void vesa_init(multiboot_info_t *mbd);
 void vesa_stage2(void);
 void vesa_reset(void);
+void vputs_text(int x, int y, const char *str, color_t fg, color_t bg);
 
 bool inTextMode;
 bool fullscreen;

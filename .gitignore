@@ -11,7 +11,7 @@ testing_area
 *.dSYM
 tags
 Session.vim
-
+.DS_Store
 serial-output
 
 initrd/bin/*

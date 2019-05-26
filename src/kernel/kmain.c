@@ -10,6 +10,7 @@
 #include <kernel/keyboard.h>
 #include <kernel/timer.h>
 #include <kernel/heap.h>
+#include <kernel/argon.h>
 #include <kernel/vmm.h>
 #include <kernel/time.h>
 #include <kernel/multiboot.h>
@@ -347,7 +348,7 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 					(devices[disk].partition[part].type == PART_FAT32 ||
 					 devices[disk].partition[part].type == PART_FAT32_LBA))
 			{
-				fat_detect(&devices[disk], part);
+				//fat_detect(&devices[disk], part);
 			}
 			else if (devices[disk].partition[part].exists && devices[disk].partition[part].type == PART_LINUX) {
 				ext2_detect(&devices[disk], part);
@@ -434,6 +435,8 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 
 
     create_task(&kshell, "kshell", virtual_consoles[0], NULL, 0);
+
+    //create_task(&argon_init, "argon", virtual_consoles[0], NULL, 0);
 
 	halt();
 

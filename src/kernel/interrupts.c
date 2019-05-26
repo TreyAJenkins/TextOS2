@@ -298,7 +298,7 @@ uint32 isr_handler(uint32 esp) {
 		handler(esp);
 	}
 	else {
-		panic("Interrupt not handled (no handler registered for interrupt number)");
+		printk("Interrupt not handled (no handler registered for interrupt number %i (%x)", esp, esp);
 	}
 
 	/* Return the console to its correct value */

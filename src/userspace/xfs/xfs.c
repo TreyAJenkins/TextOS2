@@ -18,6 +18,22 @@ uint32 pmm_bytes_free() {
   asm volatile("int $0x80" : "=a" (a) : "0" (37));
   return a;
 }
+
+int install_mbr(int disk, char* mbr) {
+  int a;
+  asm volatile("int $0x80" : "=a" (a) : "0" (42), "b" (disk), "c" (mbr));
+  return a;
+}
+int install_core(int disk, char* core, uint32 size) {
+  int a;
+  asm volatile("int $0x80" : "=a" (a) : "0" (41), "b" (disk), "c" (core), "d" (size));
+  return a;
+}
+int install_kernel(int disk, char* kernel, int size, int offset) {
+  int a;
+  asm volatile("int $0x80" : "=a" (a) : "0" (43), "b" (disk), "c" (kernel), "d" (size), "S" (offset));
+  return a;
+}
 //int xfs_read_select(uint8 disk, uint8 part, char* name, void* data, uint32 pos, uint32 size) {
 //    int a;
 //    asm volatile("int $0x80" : "=a" (a) : "0" (35), "b" (disk), "c" (part), "d", (name), );
@@ -81,7 +97,7 @@ int xfs_read_select(uint8 disk, uint8 part, char* name, void* data, uint32 pos, 
 }
 
 int diskFromName(char* name) {
-    if (strlen(name) != 7) {
+    if (strlen(name) != 7 && strlen(name) != 5) {
         return -1;
     }
     if (strncmp(name, "Disk", 4) != 0 && strncmp(name, "disk", 4) != 0) {
@@ -191,11 +207,170 @@ int clone(int argc, const char* argv[]) {
     }
 }
 
+int mbr_installer(int argc, const char* argv[]) {
+    if (argc < 4) {
+        printf("Usage: xfs mbr [device] [source]\n");
+        return 1;
+    }
+    if (diskFromName(argv[2]) < 0) {
+        printf("Invalid device identifier, must be in format Disk[disk]\n");
+        return 2;
+    }
+
+    FILE *file;
+    file = fopen(argv[3], "rb");
+    if (file == NULL) {
+        printf("Could not find '%s'\n", argv[3]);
+        return 1;
+    }
+    struct stat st;
+    stat(argv[3], &st);
+    int size = st.st_size;
+
+    printf("Loading %s into memory (%i KB)\n", argv[3], size/1024);
+    if (size > pmm_bytes_free()) {
+        printf("Failed, not enough memory (Free: %i KB, Required: %i KB)\n", pmm_bytes_free()/1024, size/1024);
+        return 4;
+    }
+
+    char* buf = malloc(sizeof(char) * size);
+
+    fread(buf, size, 1, file);
+    fclose(file);
+
+    install_mbr(diskFromName(argv[2]), buf);
+    free(buf);
+    return 0;
+}
+
+int core_installer(int argc, const char* argv[]) {
+    if (argc < 4) {
+        printf("Usage: xfs core [device] [source]\n");
+        return 1;
+    }
+    if (diskFromName(argv[2]) < 0) {
+        printf("Invalid device identifier, must be in format Disk[disk]\n");
+        return 2;
+    }
+
+    FILE *file;
+    file = fopen(argv[3], "rb");
+    if (file == NULL) {
+        printf("Could not find '%s'\n", argv[3]);
+        return 1;
+    }
+    struct stat st;
+    stat(argv[3], &st);
+    int size = st.st_size;
+
+    printf("Loading %s into memory (%i KB)\n", argv[3], size/1024);
+    if (size > pmm_bytes_free()) {
+        printf("Failed, not enough memory (Free: %i KB, Required: %i KB)\n", pmm_bytes_free()/1024, size/1024);
+        return 4;
+    }
+
+    char* buf = malloc(sizeof(char) * size);
+
+    fread(buf, size, 1, file);
+    fclose(file);
+
+    install_core(diskFromName(argv[2]), buf, size);
+    free(buf);
+    return 0;
+}
+
+int installer(int argc, const char* argv[]) {
+    //CORE
+    if (argc < 6) {
+        printf("Usage: xfs install [device] [CORE.IMG] [KERNEL.BIN] [INITRD.IMG]\n");
+        return 1;
+    }
+    if (diskFromName(argv[2]) < 0) {
+        printf("Invalid device identifier, must be in format Disk[disk]\n");
+        return 2;
+    }
+
+    FILE *file;
+    FILE *filek;
+    FILE *filei;
+
+    file = fopen(argv[3], "rb");
+    if (file == NULL) {
+        printf("Could not find '%s'\n", argv[3]);
+        return 1;
+    }
+
+    struct stat st;
+
+    stat(argv[4], &st);
+    int sizek = st.st_size;
+    printf("Loading %s into memory (%i KB)\n", argv[4], sizek/1024);
+    if (sizek > pmm_bytes_free()) {
+        printf("Failed, not enough memory (Free: %i KB, Required: %i KB)\n", pmm_bytes_free()/1024, sizek/1024);
+        return 4;
+    }
+    filek = fopen(argv[4], "rb");
+    if (filek == NULL) {
+        printf("Could not find '%s'\n", argv[4]);
+        return 1;
+    }
+
+    stat(argv[5], &st);
+    int sizei = st.st_size;
+    printf("Loading %s into memory (%i KB)\n", argv[5], sizei/1024);
+    if (sizek > pmm_bytes_free()) {
+        printf("Failed, not enough memory (Free: %i KB, Required: %i KB)\n", pmm_bytes_free()/1024, sizei/1024);
+        return 4;
+    }
+    filei = fopen(argv[5], "rb");
+    if (filei == NULL) {
+        printf("Could not find '%s'\n", argv[5]);
+        return 1;
+    }
+
+    stat(argv[3], &st);
+    int size = st.st_size;
+
+    printf("Loading %s into memory (%i KB)\n", argv[3], size/1024);
+    if (size > pmm_bytes_free()) {
+        printf("Failed, not enough memory (Free: %i KB, Required: %i KB)\n", pmm_bytes_free()/1024, size/1024);
+        return 4;
+    }
+
+    char* buf = malloc(sizeof(char) * size);
+
+    fread(buf, size, 1, file);
+    fclose(file);
+
+    char* bufk = malloc(sizeof(char) * sizek);
+
+    fread(bufk, sizek, 1, filek);
+    fclose(filek);
+
+    int coreoffset = install_core(diskFromName(argv[2]), buf, size);
+    free(buf);
+
+
+    //printf("Free: %iKB\n", pmm_bytes_free()/1024);
+    int koffset = install_kernel(diskFromName(argv[2]), bufk, sizek, coreoffset);
+    free(bufk);
+
+    char* bufi = malloc(sizeof(char) * sizei);
+    fread(bufi, sizei, 1, filei);
+    fclose(filei);
+
+    install_kernel(diskFromName(argv[2]), bufi, sizei, koffset);
+    free(bufi);
+
+    return 0;
+}
+
 int main(int argc, char const *argv[]) {
     if (argc == 1) {
         printf("Usage: XFS [method] ...\nMethods:\n");
         printf("touch\tdump\tpartition\n");
-        printf("clone\tread\n");
+        printf("clone\tread\tmbr\n");
+        printf("core\n");
         printf("\n");
         return 0;
     }
@@ -225,6 +400,12 @@ int main(int argc, char const *argv[]) {
         return xfs_partition(diskFromName(argv[2]), partFromName(argv[2]));
     } else if (strncmp("clone", argv[1], 3) == 0) {
         return clone(argc, argv);
+    } else if (strncmp("mbr", argv[1], 3) == 0) {
+        return mbr_installer(argc, argv);
+    } else if (strncmp("core", argv[1], 3) == 0) {
+        return core_installer(argc, argv);
+    } else if (strncmp("install", argv[1], 3) == 0) {
+        return installer(argc, argv);
     }
 
 	return 0;

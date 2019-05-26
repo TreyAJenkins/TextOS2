@@ -17,8 +17,8 @@ typedef struct {
     uint8 ttl;
     uint8 protocol;
     uint16 header_checksum;
-    uint8 src_ip[4]; 
-    uint8 dst_ip[4]; 
+    uint8 src_ip[4];
+    uint8 dst_ip[4];
 } __attribute__((packed)) ipv4header_t;
 
 // internet_checksum.s - used for things besides IP and ICMP, though

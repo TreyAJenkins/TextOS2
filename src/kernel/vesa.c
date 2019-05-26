@@ -108,12 +108,13 @@ void empty_layer(int z) {
     vesa_redraw();
 }
 extern bool splash;
+uint32 vbe_mode_info_p;
 
 void vesa_init(multiboot_info_t *mbd) {
 
     uint32 vbe_control_info_p = mbd->vbe_control_info;
     uint16 vbe_mode_p = mbd->vbe_mode;
-    uint32 vbe_mode_info_p = mbd->vbe_mode_info;
+    vbe_mode_info_p = mbd->vbe_mode_info;
 
     VESAFG = COLOR_WHITE;
     VESABG = COLOR_BLACK;
@@ -506,6 +507,19 @@ void vputs_status(int x, const char *str, color_t fg, color_t bg) {
     assert(x + len <= vesa_width);
     for (size_t i = 0; i < len; i++) {
         vesa_tty_set_char(x + i, 0, 0, str[i], fg, bg);
+
+        //if(x + i == 79) break; // TODO: allow timer spinner
+        //NOTE: UNCOMMENT TO ENABLE OLD GRAPHICS real_vmem[x + i] = (status_bgcolor << BGCOLOR) | (status_fgcolor << FGCOLOR) | str[i];
+    }
+}
+
+void vputs_text(int x, int y, const char *str, color_t fg, color_t bg) {
+    //printk("Status\n");
+    size_t len = strlen(str);
+    assert(x + len <= vesa_width);
+    assert(y <= vesa_height);
+    for (size_t i = 0; i < len; i++) {
+        vesa_tty_set_char(x + i, y, 0, str[i], fg, bg);
 
         //if(x + i == 79) break; // TODO: allow timer spinner
         //NOTE: UNCOMMENT TO ENABLE OLD GRAPHICS real_vmem[x + i] = (status_bgcolor << BGCOLOR) | (status_fgcolor << FGCOLOR) | str[i];
