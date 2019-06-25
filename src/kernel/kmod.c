@@ -5,15 +5,15 @@
 #include <kernel/backtrace.h>
 #include <kernel/elf.h>
 
-
 /*
+#include <kernel/lua/lua.h>
+#include <kernel/lua/lualib.h>
+#include <kernel/lua/lauxlib.h>
 
-struct Request {
-    int length;
-    char requests[]
-    void* response[]
-
-}
-*/
-
-int loadModule() {}
+void test_lua() {
+    lua_State *L;
+    L = luaL_newstate();
+    luaL_openlibs(L);
+    luaL_dostring(L, "print \"TextOS Module Interface: \" .. _VERSION");
+    lua_close(L);
+}*/

@@ -46,7 +46,30 @@ uint32 inl(uint16 port)
 extern bool kernel_paniced;
 extern char _printk_buf[1024];
 
+int panicrecover() {
+    //if (current_task == &kernel_task) {
+    if (current_task->privilege == 0) { // Kernel task
+        printk("Recovery impossible\n");
+        return 1;
+    }
+
+    printk("\nAttempting to recover...\n");
+    printk("Exterminating offending task: %u (%s)\n\n", current_task->id, current_task->name);
+    //volatile task_t *offender = &current_task;
+
+
+    kill((task_t *)current_task);
+
+    YIELD;
+
+    printk("Extermination failed\n");
+    return 1;
+}
+
 void panic(const char *fmt, ...) {
+
+    panicrecover();
+
 	asm volatile("cli");
 	console_switch(&kernel_console);
 	console_task = &kernel_task; // always has a console; this way, putchar() won't panic and cause a triple fault
@@ -68,10 +91,11 @@ void panic(const char *fmt, ...) {
 		}
 	}
 
-	printk("\nCurrent task: %u (%s)", current_task->id, current_task->name);
+	printk("\nCurrent task: %u (%s)\n", current_task->id, current_task->name);
 
 	kernel_paniced = true;
 	update_statusbar();
+    //panicrecover();
 
 	// Uncommenting cli+hlt makes scrollback after a panic impossible, but
 	// on the other hand, it gives useful backtraces and debugging possibilities

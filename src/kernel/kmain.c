@@ -31,6 +31,7 @@
 #include <kernel/elf.h>
 #include <kernel/fpu.h>
 #include <kernel/hostinfo.h>
+#include <kernel/kmod.h>
 #include <nucleus.h>
 #include <kernel/tsa.h>
 #include <kernel/vesa.h>

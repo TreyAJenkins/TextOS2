@@ -19,6 +19,7 @@ $(shell echo $(BUILDID)+1 | bc > build.txt)
 
 CC = ccache i586-pc-TextOS-gcc
 CFLAGS := -O0 -fstack-protector-all -nostdlib -nostdinc -I./src/include -lc -MMD -MP -I$(GCCINC) -I$(TOOLCHAININC) -std=gnu99 -march=i586 $(WARNINGS) -ggdb3 -D__DYNAMIC_REENT__ -D_TEXTOS_KERNEL -fdiagnostics-color=always -DBUILDID="$(BUILDID)"
+#CFLAGS := -O0 -fstack-protector-all -I./src/include -lc -MMD -MP -I$(GCCINC) -I$(TOOLCHAININC) -std=gnu99 -march=i586 $(WARNINGS) -ggdb3 -D__DYNAMIC_REENT__ -D_TEXTOS_KERNEL -fdiagnostics-color=always -DBUILDID="$(BUILDID)"
 LD = i586-pc-TextOS-ld
 NATIVECC = gcc # Compiler for the HOST OS, e.g. Linux, Mac OS X
 
