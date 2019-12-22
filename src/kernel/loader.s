@@ -19,7 +19,7 @@ MultiBootHeader:
    dd 0, 0, 0, 0, 0
    dd 0 ; 0 = set graphics mode
    ;dd 800, 600, 32
-   dd 800, 600, 32
+   dd 0, 0, 32
    ;dd 1920,1080,32 ; zero means no preference
 
 section .text

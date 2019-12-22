@@ -17,6 +17,7 @@ serial-output
 initrd/bin/*
 initrd/ext2/
 initrd/fat/
+initrd/install
 
 toolchain/distfiles
 toolchain/build-*
