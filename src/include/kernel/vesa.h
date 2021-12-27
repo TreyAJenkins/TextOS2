@@ -6,8 +6,8 @@
 #include <kernel/console.h>
 
 #define VESA_MAGIC "VESA"
-#define VESA_HEIGHT 600
-#define VESA_WIDTH 800
+#define VESA_HEIGHT 1080
+#define VESA_WIDTH 1920
 
 typedef struct vesa_control_info {
     char magic[4]; // "VESA"
@@ -70,6 +70,9 @@ uint16 vesa_mode;
 vesa_mode_info_t vesa_mode_info;
 int vesa_width;
 int vesa_height;
+
+int vesa_res_x;
+int vesa_res_y;
 
 typedef uint32 color_t;
 #define MKCOLOR(r, g, b) (((color_t)((r) & 0xff) << 16) | ((color_t)((g) & 0xff) << 8) | ((color_t)((b) & 0xff)))

@@ -58,6 +58,7 @@ struct menu_t {
 };
 
 struct colored_char_t vesa_screen[2][VESA_HEIGHT][VESA_WIDTH];
+//struct colored_char_t ***vesa_screen;
 
 
 void vesa_reset() {
@@ -111,6 +112,9 @@ void empty_layer(int z) {
 extern bool splash;
 uint32 vbe_mode_info_p;
 
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+
 void vesa_init(multiboot_info_t *mbd) {
 
     uint32 vbe_control_info_p = mbd->vbe_control_info;
@@ -140,7 +144,12 @@ void vesa_init(multiboot_info_t *mbd) {
     vesa_width = vesa_mode_info.x_res / VESA_CHAR_WIDTH;
     vesa_height = vesa_mode_info.y_res / VESA_CHAR_HEIGHT;
 
-    //vesa_screen = (struct colored_char_t*) kmalloc(vesa_width * vesa_height * sizeof(struct colored_char_t));
+    vesa_res_x = vesa_mode_info.x_res;
+    vesa_res_y = vesa_mode_info.y_res;
+
+    //*vesa_screen = (struct colored_char_t***) kmalloc(2 * vesa_width * vesa_height * sizeof(struct colored_char_t));
+    //struct colored_char_t vesa_screen[2][vesa_mode_info.y_res][vesa_mode_info.x_res];
+
 
     if (splash) {
         fullscreen = true;
@@ -170,6 +179,7 @@ void vesa_stage2() {
         //_vmm_map((0xa000 + (4096*i)), (0xFD000000 + (4096*i)), kernel_directory, true, PAGE_RW);
         //vesa_redraw();
     }
+    prints("VESA mapped from 0x%p -> 0x%p\n", vesa_fb_loc, (vesa_fb_loc + (4096*vesa_pages)));
     printk("VESA mapped from 0x%p -> 0x%p\n", vesa_fb_loc, (vesa_fb_loc + (4096*vesa_pages)));
 
     splash = false;
@@ -178,6 +188,7 @@ void vesa_stage2() {
     vesa_redraw();
 }
 
+#pragma GCC pop_options
 
 int vputchar(char c) {
     if (!inTextMode) {
@@ -863,8 +874,8 @@ void vesa_draw_menu(struct menu_t menu) {
 }
 
 void vesa_draw_logo() {
-    int x = (VESA_WIDTH/2) - (logo_width/2);
-    int y = (VESA_HEIGHT/2) - (logo_height/2);
+    int x = (vesa_res_x/2) - (logo_width/2);
+    int y = (vesa_res_y/2) - (logo_height/2);
     //printk("VX: %i, VY: %i, LX: %i, LY: %i, X: %i, Y: %i\n", VESA_WIDTH, VESA_HEIGHT, logo_width, logo_height, x, y);
     //int x = 0;
     //int y = 0;

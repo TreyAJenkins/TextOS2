@@ -267,6 +267,7 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 
     //vputchar('K');
     vesa_stage2();
+	prints("Stage2+");
     //vesa_clear(COLOR_BLACK);
 
 
