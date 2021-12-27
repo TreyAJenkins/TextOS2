@@ -17,3 +17,11 @@ void test_lua() {
     luaL_dostring(L, "print \"TextOS Module Interface: \" .. _VERSION");
     lua_close(L);
 }*/
+
+//struct KextTab {
+//    char name[64];
+//    void* pointer;
+//    int size;
+//}
+
+//struct KextTab KextTable[256];

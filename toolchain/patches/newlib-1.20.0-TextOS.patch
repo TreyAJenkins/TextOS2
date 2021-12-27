@@ -20,7 +20,7 @@ diff -Naur newlib-1.20.0/newlib/configure.host newlib-1.20.0-TextOS/newlib/confi
 +  i[3-7]86-*-TextOS*)
 +	sys_dir=TextOS
 +   # __NETBSD_SYSCALLS and _ELIX_LEVEL are to allow glob to compile; we don't have getpwnam and related functions
-+	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES -D__DYNAMIC_REENT__ -DHAVE_NANOSLEEP -D__NETBSD_SYSCALLS -D_ELIX_LEVEL=3 -O0 -gstabs+"
++	newlib_cflags="${newlib_cflags} -DMISSING_SYSCALL_NAMES -D__DYNAMIC_REENT__ -DHAVE_NANOSLEEP -D__NETBSD_SYSCALLS -D_ELIX_LEVEL=3 -O0"
 +	posix_dir=posix
 +	;;
    i[34567]86-*-rdos*)

@@ -7,14 +7,14 @@ fi
 
 # Set these up!
 DL=1          # Download distfiles automatically?
-FORCE_CLEAN=1 # Remove all unpacked sources/build stuff and re-unpack and patch
-BUILD_GDB=1   # Build a GDB with TextOS target? (Set to 0 if you're not going to debug, to save time/disk space.)
+FORCE_CLEAN=0 # Remove all unpacked sources/build stuff and re-unpack and patch
+BUILD_GDB=0   # Build a GDB with TextOS target? (Set to 0 if you're not going to debug, to save time/disk space.)
 export PREFIX=/usr/local/cross # Where to install everything
 
 sed -e "s#PREFIX = .*#PREFIX = $PREFIX#g" -i ../Makefile
 
 MAC=0 # checked below automatically
-if gcc --version | grep -iq llvm; then
+if gcc --version | grep -iq apple; then
 	MAC=1
 fi
 
@@ -46,18 +46,22 @@ fi
 if [[ $MAC -eq 1 ]]; then
 	if [[ ! -f "/usr/bin/gcc-4.2" || ! -f "/usr/bin/g++-4.2" || ! -f "/usr/bin/cpp-4.2" ]]; then
 		echo "/usr/bin{gcc,g++,cpp}-4.2 not found! These are required for Mac OS X builds."
-		exit 1
+		#exit 1
 	fi
 	#export CC=/usr/bin/gcc-4.2
 	#export CXX=/usr/bin/g++-4.2
 	#export CPP=/usr/bin/cpp-4.2
 	#export LD=/usr/bin/gcc-4.2
 
-	export CC=/usr/lib/ccache/bin/gcc
-	export CXX=/usr/lib/ccache/bin/g++
-	export CPP=/usr/lib/ccache/bin/cpp
-	export LD=/usr/lib/ccache/bin/gcc
+	#export CC=/usr/lib/ccache/bin/gcc
+	#export CXX=/usr/lib/ccache/bin/g++
+	#export CPP=/usr/lib/ccache/bin/cpp
+	#export LD=/usr/lib/ccache/bin/gcc
 
+	export CC=/usr/local/bin/gcc-11
+	export CXX=/usr/local/bin/g++-11
+	export CPP=/usr/local/bin/cpp-11
+	export LD=/usr/local/bin/gcc-11
 
 fi
 
@@ -148,7 +152,8 @@ echo
 echo Configuring GCC...
 echo
 cd build-gcc
-../gcc-4.9.2/configure --target=$TARGET --prefix=$PREFIX --disable-nls --enable-languages=c --with-gmp=/opt/local --with-mpfr=/opt/local --with-mpc=/opt/local || err
+#../gcc-4.9.2/configure --target=$TARGET --prefix=$PREFIX --disable-nls --enable-languages=c --with-gmp=/opt/local --with-mpfr=/opt/local --with-mpc=/opt/local || err
+../gcc-4.9.2/configure --target=$TARGET --prefix=$PREFIX --disable-nls --enable-languages=c --with-gmp=/usr/local/Cellar/gmp/6.2.1_1 --with-mpfr=/usr/local/Cellar/mpfr/4.1.0/ --with-mpc=/usr/local/Cellar/libmpc/1.2.1/ || err
 
 echo
 echo Building GCC and libgcc...
@@ -198,15 +203,15 @@ fi # end $NEWLIB_ONLY != 1
 # that builds code *for* TextOS, not just code that *targets* it
 export PATH=$PATH:$PREFIX/bin
 export CFLAGS_FOR_TARGET="-O0 -gstabs+"
-export CFLAGS="-O0 -gstabs+"
-export CFLAGS_FOR_BUILD="-O0 -gstabs+"
+export CFLAGS="-O0"
+export CFLAGS_FOR_BUILD="-O0"
 
 # These MUST point to files from automake 1.12.x OR OLDER!
 # Newlib unfortunately requires features that were removed in 1.13.
 #export AUTOMAKE=$PREFIX/../bin/automake
 #export ACLOCAL=$PREFIX/../bin/aclocal
-export AUTOMAKE=/usr/bin/automake
-export ACLOCAL=/usr/bin/aclocal
+export AUTOMAKE=/Users/nt/Documents/Projects/osdev/TextOS2/toolchain/automake/bin/bin/automake
+export ACLOCAL=/Users/nt/Documents/Projects/osdev/TextOS2/toolchain/automake/bin/bin/aclocal
 
 echo
 echo Patching Newlib...
