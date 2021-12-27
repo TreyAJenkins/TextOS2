@@ -8,6 +8,7 @@
 #include <kernel/hostinfo.h>
 #include <kernel/tsa.h>
 #include <kernel/time.h>
+//#include <kernel/nucleus.h>
 #include <logo.h>
 
 #define STRINGIFY(x) #x
@@ -700,7 +701,7 @@ void vesa_tty_set_char(size_t x, size_t y, size_t z, char ch, color_t fgcolor, c
              device_bc = bgcolor;
 
     if (splash) {
-        device_fc = WHITE;
+        device_fc = BLACK;
         device_bc = WHITE;
     }
 
@@ -877,4 +878,22 @@ void vesa_draw_logo() {
         color_t color = vesa_device_color(MKCOLOR(pixel[0], pixel[1], pixel[2]));
         SET_COLOR(lfb, color);
     RECTANGLE_FOR_EACH_PIXEL_END()
+}
+
+void ORDER_66() {
+    for (int y = 1; y < vesa_height; y++) {
+        for (int x = 0; x < vesa_width; x++) {
+            if (crand(10) < crand(5) && (vesa_screen[0][y][x].enabled == true || (crand(50) == 1))) {
+
+                vesa_screen[0][y][x].enabled = true;
+                vesa_screen[0][y][x].c = ((vesa_screen[0][y][x].c - 31) % 94) + 32;
+
+            }
+
+            if (crand(10) == 1) {
+                vesa_redraw();
+            }
+        }
+    }
+    ORDER_66();
 }

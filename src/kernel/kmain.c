@@ -35,6 +35,7 @@
 #include <nucleus.h>
 #include <kernel/tsa.h>
 #include <kernel/vesa.h>
+#include <kernel/crypto/aes.h>
 
 
 #define STRINGIFY(x) #x
@@ -227,8 +228,17 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
         printc(BLACK, RED, "MEMORY MALFUNCTION, %u ERRORS!\n", memerror);
         printk("CHECKED FROM %p -> %p\n", 0x1000000, ram*1000);
     }
-
+	
     //for(;;);
+
+	printk("Decrypting initrd... ");
+	initrd_location = decrypt_initrd(initrd_location);
+    printc(BLACK, GREEN, "success\n");
+
+    //for (size_t i = 0; i < 32; i++) {
+    //    printk("%02x", *initrd_location[i]);
+    //}
+
 
 	/* Initialize the initrd */
 	/* (do this before paging, so that it doesn't end up in the kernel heap) */
@@ -284,6 +294,9 @@ void kmain(multiboot_info_t *mbd, unsigned int magic, uint32 init_esp0) {
 	GetCPUVendor();
 	GetCPUName();
 	printk("Processor: %s (%s)\n", trim(CPUName), trim(CPUVendor));
+
+
+
 
     //printc(COLOR_WHITE, COLOR_WHITE, "Test123\n");
 

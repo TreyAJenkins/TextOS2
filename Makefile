@@ -18,7 +18,7 @@ $(shell echo $(BUILDID)+1 | bc > build.txt)
 #BUILDID = "12ABCDEF"
 
 CC = ccache i586-pc-TextOS-gcc
-CFLAGS := -O0 -fstack-protector-all -nostdlib -nostdinc -I./src/include -lc -MMD -MP -I$(GCCINC) -I$(TOOLCHAININC) -std=gnu99 -march=i586 $(WARNINGS) -ggdb3 -D__DYNAMIC_REENT__ -D_TEXTOS_KERNEL -fdiagnostics-color=always -DBUILDID="$(BUILDID)"
+CFLAGS := -O3 -fstack-protector-all -nostdlib -nostdinc -I./src/include -lc -MMD -MP -I$(GCCINC) -I$(TOOLCHAININC) -std=gnu99 -march=i586 $(WARNINGS) -ggdb3 -D__DYNAMIC_REENT__ -D_TEXTOS_KERNEL -fdiagnostics-color=always -DBUILDID="$(BUILDID)"
 #CFLAGS := -O0 -fstack-protector-all -I./src/include -lc -MMD -MP -I$(GCCINC) -I$(TOOLCHAININC) -std=gnu99 -march=i586 $(WARNINGS) -ggdb3 -D__DYNAMIC_REENT__ -D_TEXTOS_KERNEL -fdiagnostics-color=always -DBUILDID="$(BUILDID)"
 LD = i586-pc-TextOS-ld
 NATIVECC = gcc # Compiler for the HOST OS, e.g. Linux, Mac OS X
@@ -72,8 +72,10 @@ build:
 		mv initrd/bin/eshell initrd/bin/sh; \
 	fi
 	@python2 misc/create_initrd.py > /dev/null # let stderr through!
+	python3 misc/encrypt_initrd.py isofiles/boot/initrd.img TextOS
 	#@mkisofs -R -b boot/grub/stage2_eltorito -no-emul-boot -boot-load-size 4 -boot-info-table -o TextOS.iso isofiles 2>&1 | grep -vP 'GNU xorriso|^\s*$$' || true
-	@grub-mkrescue -o TextOS.iso isofiles/
+	#@grub-mkrescue -o TextOS.iso isofiles/
+	bash mkgrub.sh
 	-@rm -f serial-output
 
 strip:

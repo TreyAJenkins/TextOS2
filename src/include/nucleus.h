@@ -11,4 +11,8 @@ int crand(int max);
 int GenerateToken(void);
 int InitSSP(void);
 
+int test_decrypt_cbc(void);
+int test_md5(void);
+
+uint32 decrypt_initrd(uint32 initrd_address);
 #endif

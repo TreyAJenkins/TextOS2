@@ -1,3 +1,6 @@
+#pragma GCC push_options
+#pragma GCC optimize ("O0")
+
 #include <kernel/syscall.h>
 #include <kernel/console.h>
 #include <kernel/interrupts.h>
@@ -217,3 +220,4 @@ uint32 syscall_handler(uint32 esp) {
 
 	return esp;
 }
+#pragma GCC pop_options
